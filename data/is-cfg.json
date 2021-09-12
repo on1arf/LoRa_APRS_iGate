@@ -24,7 +24,11 @@
 	},
 	"digi": {
 		"active": false,
-		"beacon": false
+		"beacon": false,
+		"fillin": false,
+		"maxhopnowide": 3,
+		"invalidcalls": "NOCALL",
+		"donotdigi": ""
 	},
 	"lora": {
 		"frequency_rx": 433775000,
