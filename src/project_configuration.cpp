@@ -29,6 +29,10 @@ void ProjectConfigurationManagement::readProjectConfiguration(DynamicJsonDocumen
 
   conf.digi.active          = data["digi"]["active"] | false;
   conf.digi.beacon          = data["digi"]["beacon"] | false;
+  conf.digi.fillin          = data["digi"]["fillin"] | false;
+  conf.digi.maxhopnowide    = data["digi"]["maxhopnowide"] | 3;
+  conf.digi.invalidcalls    = data["digi"]["invalidcalls"] | "NOCALL";
+  conf.digi.donotdigi       = data["digi"]["donotdigi"] | "";
   conf.lora.frequencyRx     = data["lora"]["frequency_rx"] | 433775000;
   conf.lora.frequencyTx     = data["lora"]["frequency_tx"] | 433775000;
   conf.lora.power           = data["lora"]["power"] | 20;

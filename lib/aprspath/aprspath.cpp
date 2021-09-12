@@ -164,28 +164,6 @@ public:
 
 };
 
-/*
-int invalidcallcheck (char * invalidcalllist, string call2check) {
-    bool ret=true;
-
-    pathnode call2check_pn = pathnode(call2check);
-
-	char * p;
-	p=strtok(invalidcalllist,",");
-	
-	while (p) {
-		if (!call2check_pn.equalcall(string(p))) {
-            ret=false;
-            break;
-        };
-		p=strtok(NULL, ",");
-	};
-
-    return ret;
-
-};
-*/
-
 
 class aprspath {
     bool verified;

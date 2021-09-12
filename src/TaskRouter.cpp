@@ -6,6 +6,11 @@
 #include "TaskRouter.h"
 #include "project_configuration.h"
 
+#include <string>
+
+using std::string;
+
+
 String create_lat_aprs(double lat);
 String create_long_aprs(double lng);
 
@@ -25,6 +30,10 @@ bool RouterTask::setup(System &system) {
   String lat = create_lat_aprs(system.getUserConfig()->beacon.positionLatitude);
   String lng = create_long_aprs(system.getUserConfig()->beacon.positionLongitude);
   _beaconMsg->getBody()->setData(String("=") + lat + "L" + lng + "&" + system.getUserConfig()->beacon.message);
+
+  // validity check for mycall
+  String mycall=system.getUserConfig()->callsign; 
+
 
   return true;
 }

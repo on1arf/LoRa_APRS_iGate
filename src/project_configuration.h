@@ -49,6 +49,10 @@ public:
 
     bool active;
     bool beacon;
+    bool fillin;
+    int maxhopnowide;
+    String invalidcalls;
+    String donotdigi;
   };
 
   class LoRa {
