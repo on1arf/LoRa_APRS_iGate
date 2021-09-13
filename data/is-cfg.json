@@ -27,7 +27,7 @@
 		"beacon": false,
 		"fillin": false,
 		"maxhopnowide": 3,
-		"invalidcalls": "NOCALL",
+		"invalidcalls": "NOCALL,NOCALL-10",
 		"donotdigi": ""
 	},
 	"lora": {

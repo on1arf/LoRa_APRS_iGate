@@ -6,6 +6,8 @@
 #include "TaskRouter.h"
 #include "project_configuration.h"
 
+#include <aprspath.h>
+
 #include <string>
 
 using std::string;

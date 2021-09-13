@@ -4,6 +4,7 @@
 
 #include <iostream>
 //#include <string>
+#include <WString.h>
 #include <list>
 #include <vector>
 
@@ -41,6 +42,7 @@ private:
     pathnode *wi[2];
     int wicount;
     int nodecount;
+    int maxhopnowide;
 
 public:
     aprspath();
