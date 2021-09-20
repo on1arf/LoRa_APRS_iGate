@@ -48,6 +48,9 @@ void setup() {
   delay(500);
   logPrintlnI("LoRa APRS iGate by OE5BPA (Peter Buchegger)");
   logPrintlnI("Version: " VERSION);
+  logPrintlnI("Modified ON1ARF (Kristoff Bonne)");
+  logPrintlnI("Version 0.1.0 .. added digipeating path handling");
+
 
   std::list<BoardConfig const *> boardConfigs;
   boardConfigs.push_back(&TTGO_LORA32_V1);

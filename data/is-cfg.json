@@ -1,10 +1,10 @@
 {
-	"callsign": "NOCALL-10",
+	"callsign": "ON1ARF-6",
 	"wifi": {
 		"AP": [
 			{
-				"SSID": "YOURSSID",
-				"password": "YOURPASSWORD"
+				"SSID": "XXXXX",
+				"password": "XXXXX"
 			}
 		]
 	},
@@ -17,23 +17,23 @@
 		"timeout": 15
 	},
 	"aprs_is": {
-		"active": true,
+		"active": false,
 		"passcode": "",
 		"server": "euro.aprs2.net",
 		"port": 14580
 	},
 	"digi": {
-		"active": false,
-		"beacon": false,
+		"active": true,
+		"beacon": true,
 		"fillin": false,
 		"maxhopnowide": 3,
-		"invalidcalls": "NOCALL,NOCALL-10",
-		"donotdigi": ""
+		"invalidcalls": "NOCALL,NOCALL-10,INVALID",
+		"donotdigi": "ON1ARF-7"
 	},
 	"lora": {
 		"frequency_rx": 433775000,
 		"frequency_tx": 433775000,
-		"power": 20,
+		"power": 1,
 		"spreading_factor": 12,
 		"signal_bandwidth": 125000,
 		"coding_rate4": 5

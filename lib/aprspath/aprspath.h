@@ -45,13 +45,14 @@ private:
     int maxhopnowide;
 
 public:
-    aprspath();
+//    aprspath();
     aprspath(int maxhopnw);
+    ~aprspath();
 
-    void appendnodetopath(pathnode p);
+    bool appendnodetopath(pathnode p);
     bool checkpath();
 
-    int doloopcheck (String mycall);
+    bool doloopcheck (String mycall);
 
     bool adddigi (String mycall, bool fillin);
 
@@ -62,8 +63,10 @@ public:
 /////////////////////////
 // some support functions
 
-vector<String> splitchrp2v(char * in, char token);
+//vector<String> splitchrp2v(char * in, char token);
+vector<String> splitstr2v(String in, char token);
 
 bool isinvector(vector <pathnode> pathvector, pathnode element); 
+bool strisalphanum(String s);
 
 #endif
