@@ -20,7 +20,6 @@ private:
 
   std::shared_ptr<APRSMessage> _beaconMsg;
   Timer                        _beacon_timer;
-//aprspath                     _aprspath;
   vector<pathnode>             _invalidcall;
   vector<pathnode>             _donotdigi;           
 };

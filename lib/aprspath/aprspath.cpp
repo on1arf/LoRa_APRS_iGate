@@ -162,8 +162,8 @@ pathnode::pathnode (String callsign_in){
 }
 
 
-bool pathnode::equalcall(pathnode d){
-    if ((callsign==d.callsign) && (ssid==d.ssid)) {
+bool pathnode::equalcall(pathnode d, bool checkssid){
+    if ((callsign==d.callsign) && ((!checkssid) || (ssid==d.ssid))) {
         return true;
     }
 
@@ -173,9 +173,21 @@ bool pathnode::equalcall(pathnode d){
 }
 
 
+String pathnode::pathnode2str() {
+    // if there is a ssid
+    if (ssid) {
+        return callsign + "-" + String(ssid);
+    };
+
+    // if not, just return the callsign
+    return callsign;
+};
+
+
 aprspath::aprspath(int maxhopnw) {
     verified=false;
     path.clear();
+    lastnode=NULL;
     wi[0]=NULL;
     wi[1]=NULL;
     wicount=0;
@@ -183,11 +195,6 @@ aprspath::aprspath(int maxhopnw) {
     maxhopnowide=maxhopnw;
 }
 
-
-aprspath::~aprspath () {
-    // memory cleanup
-    path.clear();
-}
 
 
 bool aprspath::appendnodetopath(pathnode p) {
@@ -218,7 +225,14 @@ bool aprspath::checkpath() {
                 wi[wicount]=&(*it);
             };
             wicount+=1;
+
+            
+        } else {
+            // set "lastnode" to the last node that is not a "wide"
+            lastnode=&(*it);
         };
+
+        
     }
 
     // maximum two WIDE nodes in the path 
@@ -255,7 +269,7 @@ bool aprspath::doloopcheck (String mycall) {
     
     std::list<pathnode>::iterator it;
     for (it = path.begin(); it != path.end(); ++it) {   
-        if (p.equalcall(*it)) return false;
+        if (p.equalcall(*it, true)) return false;
     }
     return true;
 }
@@ -410,25 +424,12 @@ String aprspath::printfullpath() {
 
 
 
+pathnode * aprspath::getlastnode() {
+    return lastnode;
+}
+
 /////////////////////////
 // some support functions
-
-/*
-vector<String> splitchrp2v(char * in, char token) {
-    vector<String> ret;
-
-	char * p;
-	p=strtok(in,&token);
-	
-
-	while (p) {
-		ret.push_back(String(p));
-		p=strtok(NULL, ",");
-	};
-
-    return ret;
-};
-*/
 
 
 
@@ -457,11 +458,10 @@ vector<String> splitstr2v(String in, char token) {
 
 
 
-bool isinvector(vector <pathnode> pathvector, pathnode element) {
+bool isinvector(vector <pathnode> pathvector, pathnode element, bool checkssid) {
+
     for(auto thisnode:pathvector) {
-        if (thisnode.equalcall(element)) {
-            return true;
-        };
+        if (thisnode.equalcall(element, checkssid)) return true;
     }
     return false;
 

@@ -33,6 +33,7 @@ void ProjectConfigurationManagement::readProjectConfiguration(DynamicJsonDocumen
   conf.digi.maxhopnowide    = data["digi"]["maxhopnowide"] | 3;
   conf.digi.invalidcalls    = data["digi"]["invalidcalls"] | "NOCALL";
   conf.digi.donotdigi       = data["digi"]["donotdigi"] | "";
+  conf.digi.destination     = data["digi"]["destination"] | "APLG01";
   conf.lora.frequencyRx     = data["lora"]["frequency_rx"] | 433775000;
   conf.lora.frequencyTx     = data["lora"]["frequency_tx"] | 433775000;
   conf.lora.power           = data["lora"]["power"] | 20;
@@ -83,6 +84,11 @@ void ProjectConfigurationManagement::writeProjectConfiguration(Configuration &co
   data["aprs_is"]["port"]                 = conf.aprs_is.port;
   data["digi"]["active"]                  = conf.digi.active;
   data["digi"]["beacon"]                  = conf.digi.beacon;
+  data["digi"]["fillin"]                  = conf.digi.fillin;
+  data["digi"]["maxhopnowide"]            = conf.digi.maxhopnowide;
+  data["digi"]["invalidcalls"]            = conf.digi.invalidcalls;
+  data["digi"]["donotdigi"]               = conf.digi.donotdigi;
+  data["digi"]["destination"]             = conf.digi.destination;
   data["lora"]["frequency_rx"]            = conf.lora.frequencyRx;
   data["lora"]["frequency_tx"]            = conf.lora.frequencyTx;
   data["lora"]["power"]                   = conf.lora.power;

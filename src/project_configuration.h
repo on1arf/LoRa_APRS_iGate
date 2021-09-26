@@ -44,7 +44,7 @@ public:
 
   class Digi {
   public:
-    Digi() : active(false), beacon(true) {
+    Digi() : active(false), beacon(true), fillin(false) , maxhopnowide(3), invalidcalls("NOCALL,INVALID"), donotdigi("NOCALL,INVALID"),destination("APLG01"){
     }
 
     bool active;
@@ -53,6 +53,7 @@ public:
     int maxhopnowide;
     String invalidcalls;
     String donotdigi;
+    String destination;
   };
 
   class LoRa {

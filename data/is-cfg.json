@@ -9,7 +9,7 @@
 		]
 	},
 	"beacon": {
-		"message": "LoRa iGATE & Digi, Info: github.com/lora-aprs/LoRa_APRS_iGate",
+		"message": "LoRa iGATE & Digi, Info: github.com/on1arf/LoRa_APRS_iGate",
 		"position": {
 			"latitude": 0.000000,
 			"longitude": 0.000000
@@ -27,8 +27,9 @@
 		"beacon": true,
 		"fillin": false,
 		"maxhopnowide": 3,
-		"invalidcalls": "NOCALL,NOCALL-10,INVALID",
-		"donotdigi": "ON1ARF-7"
+		"invalidcalls": "NOCALL,INVALID",
+		"donotdigi": "ON1ARF-7",
+		"destination": "APLG01"
 	},
 	"lora": {
 		"frequency_rx": 433775000,

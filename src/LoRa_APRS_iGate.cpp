@@ -50,6 +50,8 @@ void setup() {
   logPrintlnI("Version: " VERSION);
   logPrintlnI("Modified ON1ARF (Kristoff Bonne)");
   logPrintlnI("Version 0.1.0 .. added digipeating path handling");
+  logPrintlnI("Version 0.1.1 .. added donotdigi and other callsign checks");
+  
 
 
   std::list<BoardConfig const *> boardConfigs;

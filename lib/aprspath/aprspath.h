@@ -28,7 +28,8 @@ public:
     int wideremain;
 
     pathnode (String callsign_in);
-    bool equalcall(pathnode d);
+    bool equalcall(pathnode d, bool checkssid);
+    String pathnode2str();
 };
 
 
@@ -39,15 +40,16 @@ class aprspath {
 private:
     bool verified;
     list<pathnode> path;
+    pathnode * lastnode;
     pathnode *wi[2];
     int wicount;
     int nodecount;
     int maxhopnowide;
 
 public:
-//    aprspath();
     aprspath(int maxhopnw);
-    ~aprspath();
+
+    pathnode * getlastnode();
 
     bool appendnodetopath(pathnode p);
     bool checkpath();
@@ -63,10 +65,9 @@ public:
 /////////////////////////
 // some support functions
 
-//vector<String> splitchrp2v(char * in, char token);
 vector<String> splitstr2v(String in, char token);
 
-bool isinvector(vector <pathnode> pathvector, pathnode element); 
+bool isinvector(vector <pathnode> pathvector, pathnode element, bool checkssid); 
 bool strisalphanum(String s);
 
 #endif
