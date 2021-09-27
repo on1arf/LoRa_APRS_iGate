@@ -1,5 +1,27 @@
 # LoRa APRS iGate
 
+This is a modification of the LoRa_APRS_Igate by the contributors of "LoRa_APRS"
+
+[see here] (https://github.com/lora-aprs/LoRa_APRS_iGate)
+
+This is not intended to be a replacement for the original firmware.
+This is just a personal project of mine to experiment with APRS-over-LoRa, .. and the best way to learn stuff is still to write software for it, no?
+
+Changes:
+0.1.0:
+- Implemented APRS Path processing based on [WIDE digipeating specifications] (http://wa8lmf.net/DigiPaths/)
+(see "aprspath" library).
+- applied more strict checks on callsigns.
+
+0.1.1:
+- Implemented "do-not-digi" option to deal with two digipeaters located close together.
+- Also applied more strict checks on callsigns.
+- moved the "destination" information from source-code to configuration
+
+
+## Original "README":
+
+
 ![Build check and build](https://github.com/lora-aprs/LoRa_APRS_iGate/workflows/Build%20check%20and%20build/badge.svg)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/0b7452d5b3b747b88c736e253dda51e6)](https://app.codacy.com/gh/lora-aprs/LoRa_APRS_iGate?utm_source=github.com&utm_medium=referral&utm_content=lora-aprs/LoRa_APRS_iGate&utm_campaign=Badge_Grade_Dashboard)
 

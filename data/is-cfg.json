@@ -1,5 +1,5 @@
 {
-	"callsign": "ON1ARF-6",
+	"callsign": "ON1ARF-13",
 	"wifi": {
 		"AP": [
 			{
@@ -9,10 +9,10 @@
 		]
 	},
 	"beacon": {
-		"message": "LoRa iGATE & Digi, Info: github.com/on1arf/LoRa_APRS_iGate",
+		"message": "LoRa Digi Bredene .. github.com/on1arf/LoRa_APRS_iGate",
 		"position": {
-			"latitude": 0.000000,
-			"longitude": 0.000000
+			"latitude": 51.23505,
+			"longitude": 2.9766
 		},
 		"timeout": 15
 	},
@@ -28,13 +28,13 @@
 		"fillin": false,
 		"maxhopnowide": 3,
 		"invalidcalls": "NOCALL,INVALID",
-		"donotdigi": "ON1ARF-7",
-		"destination": "APLG01"
+		"donotdigi": "ON1TG-13",
+		"destination": "APLG02"
 	},
 	"lora": {
 		"frequency_rx": 433775000,
 		"frequency_tx": 433775000,
-		"power": 1,
+		"power": 20,
 		"spreading_factor": 12,
 		"signal_bandwidth": 125000,
 		"coding_rate4": 5
