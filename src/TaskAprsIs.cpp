@@ -4,7 +4,7 @@
 #include "TaskAprsIs.h"
 #include "project_configuration.h"
 
-AprsIsTask::AprsIsTask(TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs) : Task(TASK_APRS_IS, TaskAprsIs), _toAprsIs(toAprsIs) {
+AprsIsTask::AprsIsTask(TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<std::shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_APRS_IS, TaskAprsIs), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs) {
 }
 
 AprsIsTask::~AprsIsTask() {
@@ -16,6 +16,8 @@ bool AprsIsTask::setup(System &system) {
 }
 
 bool AprsIsTask::loop(System &system) {
+  String rcvdmsg;
+
   if (!system.isWifiEthConnected()) {
     return false;
   }
@@ -30,7 +32,23 @@ bool AprsIsTask::loop(System &system) {
     return false;
   }
 
-  _aprs_is.getAPRSMessage();
+  //_aprs_is.getAPRSMessage();
+  rcvdmsg=_aprs_is.getMessage();
+  if (rcvdmsg.length() != 0)
+  {
+    logPrintlnI("APRS-IS Received: "+rcvdmsg);
+
+    if (!(rcvdmsg.startsWith("#"))) {
+      std::shared_ptr<APRSMessage> msgout = std::shared_ptr<APRSMessage>(new APRSMessage());
+      msgout->decode(rcvdmsg);
+ 
+      // send to the _FromAprsIS queue if OK
+      if (msgout->getType() != APRSMessageType::Error) _fromAprsIs.addElement(msgout);
+ 
+    }
+
+  }
+  
 
   if (!_toAprsIs.empty()) {
     std::shared_ptr<APRSMessage> msg = _toAprsIs.getElement();

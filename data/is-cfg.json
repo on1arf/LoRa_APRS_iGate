@@ -3,8 +3,8 @@
 	"wifi": {
 		"AP": [
 			{
-				"SSID": "XXXXX",
-				"password": "XXXXX"
+				"SSID": "itchy2_EXT",
+				"password": "Lisa1997"
 			}
 		]
 	},
@@ -17,10 +17,11 @@
 		"timeout": 15
 	},
 	"aprs_is": {
-		"active": false,
-		"passcode": "",
+		"active": true,
+		"passcode": "24491",
 		"server": "euro.aprs2.net",
-		"port": 14580
+		"port": 14580,
+		"noaprsis": "RFONLY,NOGATE,TCPIP"
 	},
 	"digi": {
 		"active": true,
@@ -28,7 +29,7 @@
 		"fillin": false,
 		"maxhopnowide": 3,
 		"invalidcalls": "NOCALL,INVALID",
-		"donotdigi": "ON1TG-13",
+		"donotdigi": "",
 		"destination": "APLG02"
 	},
 	"lora": {

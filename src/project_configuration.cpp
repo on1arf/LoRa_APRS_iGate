@@ -26,6 +26,7 @@ void ProjectConfigurationManagement::readProjectConfiguration(DynamicJsonDocumen
   if (data.containsKey("aprs_is") && data["aprs_is"].containsKey("server"))
     conf.aprs_is.server = data["aprs_is"]["server"].as<String>();
   conf.aprs_is.port = data["aprs_is"]["port"] | 14580;
+  conf.aprs_is.noaprsis = data["aprs_is"]["noaprsis"] | "RFONLY,NOGATE,TCPIP";
 
   conf.digi.active          = data["digi"]["active"] | false;
   conf.digi.beacon          = data["digi"]["beacon"] | false;
@@ -82,6 +83,7 @@ void ProjectConfigurationManagement::writeProjectConfiguration(Configuration &co
   data["aprs_is"]["passcode"]             = conf.aprs_is.passcode;
   data["aprs_is"]["server"]               = conf.aprs_is.server;
   data["aprs_is"]["port"]                 = conf.aprs_is.port;
+  data["aprs_is"]["noaprsis"]             = conf.aprs_is.noaprsis;
   data["digi"]["active"]                  = conf.digi.active;
   data["digi"]["beacon"]                  = conf.digi.beacon;
   data["digi"]["fillin"]                  = conf.digi.fillin;

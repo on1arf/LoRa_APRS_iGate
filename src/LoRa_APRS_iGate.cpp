@@ -25,6 +25,7 @@
 String create_lat_aprs(double lat);
 String create_long_aprs(double lng);
 
+TaskQueue<std::shared_ptr<APRSMessage>> fromAprsIs;
 TaskQueue<std::shared_ptr<APRSMessage>> toAprsIs;
 TaskQueue<std::shared_ptr<APRSMessage>> fromModem;
 TaskQueue<std::shared_ptr<APRSMessage>> toModem;
@@ -39,8 +40,8 @@ WifiTask    wifiTask;
 OTATask     otaTask;
 NTPTask     ntpTask;
 FTPTask     ftpTask;
-AprsIsTask  aprsIsTask(toAprsIs);
-RouterTask  routerTask(fromModem, toModem, toAprsIs);
+AprsIsTask  aprsIsTask(toAprsIs, fromAprsIs);
+RouterTask  routerTask(fromModem, toModem, toAprsIs, fromAprsIs);
 
 void setup() {
   Serial.begin(115200);
