@@ -23,7 +23,7 @@ private:
   Timer                        _beacon_timer;
   vector<pathnode>             _invalidcall;
   vector<pathnode>             _donotdigi;
-  vector<pathnode>             _donotaprsis;
+  vector<pathnode>             _noaprsis;
   pathnode                     *_callsign_pn;
 };
 

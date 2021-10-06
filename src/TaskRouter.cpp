@@ -4,7 +4,7 @@
 
 
 #include <aprspath.h>
-#include <aprsmsg.h>
+#include <aprsmsgmsg.h>
 
 #include "Task.h"
 #include "TaskRouter.h"
@@ -216,7 +216,7 @@ bool RouterTask::loop(System &system) {
 
         String body = digiMsg->getRawBody();
         
-        aprsmsg amsg = aprsmsg(body);
+        aprsmsgmsg amsg = aprsmsgmsg(body);
 
         if (!amsg.valid) {
 
@@ -396,6 +396,13 @@ bool RouterTask::loop(System &system) {
     };
 
 
+    pathnode source_pn = pathnode(source);
+
+    if (!(source_pn.valid)) {
+      logPrintlnD("APRS-IS MSG: Error: Source message of APRS-IS has invalid format");
+      continueok=false;
+    }
+
     // special case: messagetype = Message
     // check if the message is addressed to me
 
@@ -403,7 +410,14 @@ bool RouterTask::loop(System &system) {
 
       String body = aprsIsMsg->getRawBody();
       
-      aprsmsg amsg = aprsmsg(body);
+      aprsmsgmsg amsg = aprsmsgmsg(body);
+
+      aprsmsgmsg replymsg = aprsmsgmsg(); // reply message
+
+      logPrintlnD("aprs-message: INSIDE aprsis");
+      logPrintlnD("*"+amsg.callsign->pathnode2str()+"*");
+      logPrintlnD("*"+_callsign_pn->pathnode2str()+"*");
+
 
       if (!amsg.valid) {
 
@@ -411,8 +425,34 @@ bool RouterTask::loop(System &system) {
 
       } else  {
 
+
+        
+        logPrintlnD("aprs-message: valid");
         // is this message for me
-        if (_callsign_pn->equalcall(* amsg.callsign, true)) {
+
+        if (amsg.isack) {
+          logPrintlnD("aprs-message: IS ACK");
+        }else {
+          logPrintlnD("aprs-message: NOT IS ACK");
+        }
+
+        if (amsg.hasack) {
+          logPrintlnD("aprs-message: HAS ACK");
+        }else {
+          logPrintlnD("aprs-message: NOT HAS ACK");
+        }
+
+        if (_callsign_pn->equalcall(*(amsg.callsign), true)) {
+          logPrintlnD("aprs-message: EQUAL");
+        } else {
+          logPrintlnD("aprs-message: NOT EQUAL");
+        }
+
+        if (_callsign_pn->equalcall(*(amsg.callsign), true)) {
+          logPrintlnD("aprs-message: for ME");
+
+ 
+
 
           // this message is for me
 
@@ -424,15 +464,39 @@ bool RouterTask::loop(System &system) {
           // ignore "ack" messages (step 3)
           if (!amsg.isack) {
 
+            // create reply message
+            replymsg.callsign=&source_pn;; // reply back to original sender
+
+            replymsg.valid=true;
+  
+
+
             // send ack (if needed) (step 1)
             if (amsg.hasack) {
-              aprsIsMsg->getBody()->setData(String("ack"+amsg.msgno));
+              replymsg.isack=true;
+              replymsg.msgno=amsg.msgno;
+              aprsIsMsg->getBody()->setData(replymsg.fulltxt());
+              logPrintlnD(replymsg.fulltxt());
+
+              aprsIsMsg->setSource(_callsign_pn->pathnode2str());
+              aprsIsMsg->setDestination(system.getUserConfig()->digi.destination);
               _toAprsIs.addElement(aprsIsMsg);
             }
 
             // send message (step 2)
-            aprsIsMsg->getBody()->setData(String("Hello from LoRA_APRS_iGate/ON1ARF{001"));
-            _toAprsIs.addElement(aprsIsMsg);
+//            replymsg.isack=false;
+//            replymsg.hasack=true;
+//            replymsg.body=String("Hello from LoRA_APRS_iGate/ON1ARF");
+//            replymsg.msgno=1;
+//            aprsIsMsg->getBody()->setData(replymsg.fulltxt());
+//            logPrintlnD(replymsg.fulltxt());
+
+//            aprsIsMsg->setSource(_callsign_pn->pathnode2str());
+//            aprsIsMsg->setDestination(system.getUserConfig()->digi.destination);
+
+            // DEBUG
+            //_toAprsIs.addElement(aprsIsMsg);
+            
 
           } // end (isack)
 
@@ -449,12 +513,20 @@ bool RouterTask::loop(System &system) {
 
     // continue if OK  
     if (continueok){
+      String newpath="TCPIP," + _callsign_pn->pathnode2str() + "*,";
+
+      if (aprsis2RF_wide==0) {
+        newpath += "WIDE1-0";
+      } else {
+        newpath += "WIDE1-1";
+      }
+
       logPrintlnI("APRSIS: "+source+" "+path+" "+dest+ " "+body);
 
       // quick hack to see if it works!
       // we only need to change the path and send out the message over the Lora RF interface
-      logPrintlnI("APRSIS2RF NEW PATH: TCPIP,ON1ARF-13*");
-      aprsIsMsg->setPath("TCPIP,ON1ARF-13*");
+      logPrintlnI("APRSIS2RF NEW PATH: "+newpath);
+      aprsIsMsg->setPath(newpath);
 
       logPrintlnI("DIGI: "+ aprsIsMsg->toString());
       _toModem.addElement(aprsIsMsg);
