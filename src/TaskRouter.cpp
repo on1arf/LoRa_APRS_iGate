@@ -212,6 +212,8 @@ bool RouterTask::loop(System &system) {
       // special case: messagetype = Message
       // check if the message is addressed to me
 
+      aprsmsgmsg replymsg = aprsmsgmsg(); // reply message
+
       if (digiMsg->getType() == APRSMessageType::Message) {
 
         String body = digiMsg->getRawBody();
@@ -229,23 +231,22 @@ bool RouterTask::loop(System &system) {
 
             // this message is for me
 
-            // we do three things
-            // 1: send ack (if needed)
-            // 2: send message "Hello from LoRa_APRS_Igate"
-            // 3: ignore "ack" that should return
 
-            // ignore "ack" messages (step 3)
+            // send ack (if needed)
             if (!amsg.isack) {
 
-              // send ack (if needed) (step 1)
               if (amsg.hasack) {
-                digiMsg->getBody()->setData(String("ack"+amsg.msgno));
-                _toModem.addElement(digiMsg);
+                replymsg.isack=true;
+                replymsg.msgno=amsg.msgno;
+                digiMsg->getBody()->setData(replymsg.fulltxt());
+                logPrintlnD(replymsg.fulltxt());
+
+                digiMsg->setSource(_callsign_pn->pathnode2str());
+                digiMsg->setDestination(system.getUserConfig()->digi.destination);
+                _toModem.addElement(aprsIsMsg);
               }
 
-              // send message (step 2)
-              digiMsg->getBody()->setData(String("Hello from LoRA_APRS_iGate/ON1ARF{001"));
-              _toModem.addElement(digiMsg);
+
 
             } // end (isack)
 
@@ -414,10 +415,6 @@ bool RouterTask::loop(System &system) {
 
       aprsmsgmsg replymsg = aprsmsgmsg(); // reply message
 
-      logPrintlnD("aprs-message: INSIDE aprsis");
-      logPrintlnD("*"+amsg.callsign->pathnode2str()+"*");
-      logPrintlnD("*"+_callsign_pn->pathnode2str()+"*");
-
 
       if (!amsg.valid) {
 
@@ -456,10 +453,7 @@ bool RouterTask::loop(System &system) {
 
           // this message is for me
 
-          // we do three things
           // 1: send ack (if needed)
-          // 2: send message "Hello from LoRa_APRS_Igate"
-          // 3: ignore "ack" that should return
 
           // ignore "ack" messages (step 3)
           if (!amsg.isack) {
@@ -483,29 +477,18 @@ bool RouterTask::loop(System &system) {
               _toAprsIs.addElement(aprsIsMsg);
             }
 
-            // send message (step 2)
-//            replymsg.isack=false;
-//            replymsg.hasack=true;
-//            replymsg.body=String("Hello from LoRA_APRS_iGate/ON1ARF");
-//            replymsg.msgno=1;
-//            aprsIsMsg->getBody()->setData(replymsg.fulltxt());
-//            logPrintlnD(replymsg.fulltxt());
-
-//            aprsIsMsg->setSource(_callsign_pn->pathnode2str());
-//            aprsIsMsg->setDestination(system.getUserConfig()->digi.destination);
-
-            // DEBUG
-            //_toAprsIs.addElement(aprsIsMsg);
-            
 
           } // end (isack)
+
+
+          // done :: set 'continueok' to false to stop further execution
+          continueok=false;
+
 
         } // end (message to me)
 
       } // end (amsg is valid)
 
-      // done :: set 'continueok' to false to stop further execution
-      continueok=false;
 
     }; // end (special case: aprs message)
 

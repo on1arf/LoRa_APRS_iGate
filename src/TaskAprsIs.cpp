@@ -54,8 +54,6 @@ bool AprsIsTask::loop(System &system) {
     std::shared_ptr<APRSMessage> msg = _toAprsIs.getElement();
     logPrintlnI("APRS-IS sending: "+msg->getBody()->getData());
 
-    delay(1000);
-
     _aprs_is.sendMessage(msg);
   }
 
