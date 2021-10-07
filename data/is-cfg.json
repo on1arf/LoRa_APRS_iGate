@@ -18,7 +18,7 @@
 	},
 	"aprs_is": {
 		"active": true,
-		"passcode": "24491",
+		"passcode": "00000",
 		"server": "euro.aprs2.net",
 		"port": 14580,
 		"noaprsis": "RFONLY,NOGATE,TCPIP"
