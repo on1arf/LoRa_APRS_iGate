@@ -2,6 +2,7 @@
 
 #include <TimeLib.h>
 
+#include <memory>
 
 #include <aprspath.h>
 #include <aprsmsgmsg.h>
@@ -10,23 +11,18 @@
 #include "TaskRouter.h"
 #include "project_configuration.h"
 
-#include <string>
-
-using std::string;
-
+using std::make_shared;
 
 String create_lat_aprs(double lat);
 String create_long_aprs(double lng);
 
-RouterTask::RouterTask(TaskQueue<std::shared_ptr<APRSMessage>> &fromModem, TaskQueue<std::shared_ptr<APRSMessage>> &toModem, TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<std::shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_ROUTER, TaskRouter), _fromModem(fromModem), _toModem(toModem), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs), _callsign_pn(nullptr) {
+RouterTask::RouterTask(TaskQueue<std::shared_ptr<APRSMessage>> &fromModem, TaskQueue<std::shared_ptr<APRSMessage>> &toModem, TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<std::shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_ROUTER, TaskRouter), _fromModem(fromModem), _toModem(toModem), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs), _callsign_pn(make_shared<pathnode>()), _msghist(make_shared<msghist>()) {
 }
 
 RouterTask::~RouterTask() {
-  if (!(_callsign_pn == nullptr)){
-    delete _callsign_pn;
-  };
-
 }
+
+
 
 /////////////////////////////////////////////////////////////
 ///////////////////////////// SETUP ////////////////////////
@@ -34,12 +30,11 @@ RouterTask::~RouterTask() {
 
 bool RouterTask::setup(System &system) {
 
-  // validdity checking
-
+  // validity checking
   String callsign_uc = system.getUserConfig()->callsign;
   callsign_uc.toUpperCase();
 
-  _callsign_pn = new pathnode(callsign_uc);
+  _callsign_pn->configure(callsign_uc, normalnode);
   if (!(_callsign_pn->valid)) {
         logPrintD("Error: callsign " + callsign_uc + " does not have a valid format");
         _beaconMsg=NULL;
@@ -51,9 +46,9 @@ bool RouterTask::setup(System &system) {
   String thisinvalidcalls = system.getUserConfig()->digi.invalidcalls;
   
   for (auto invalidcall:splitstr2v( thisinvalidcalls,',')) {
-      pathnode pn(invalidcall);
+      shared_ptr<pathnode>  pn = make_shared<pathnode> (invalidcall, normalnode);
 
-      if (!pn.valid) {
+      if (!pn->valid) {
         logPrintlnD("Warning invalid-call: invalid-callsign " + invalidcall + " does not have a valid format");
       } else {
         _invalidcall.push_back(pn);
@@ -62,19 +57,19 @@ bool RouterTask::setup(System &system) {
 
 
   // check if my own callsign is not in the invalid-call list
-  if (isinvector(_invalidcall,*_callsign_pn, false)) {
+  if (isinvector(_invalidcall,_callsign_pn, nocheckssid)) {
     logPrintlnD("Error: callsign " + callsign_uc + " is in the invalid_call list");
     return false;
   };
 
 
-  // fill "do not digi" list
+  // create "do not digi" list
  String thisdonotdigi = system.getUserConfig()->digi.donotdigi;
   
   for (auto nodigi:splitstr2v(thisdonotdigi,',')){
-      pathnode pn(nodigi);
+      shared_ptr<pathnode> pn = make_shared<pathnode> (nodigi, normalnode);
 
-      if (!pn.valid) {
+      if (!pn->valid) {
         logPrintlnD("Warning: donotdigi callsign " + nodigi + " does not have a valid format");
       } else {
         _donotdigi.push_back(pn);
@@ -82,18 +77,39 @@ bool RouterTask::setup(System &system) {
   };
 
 
-  // fill "noaprsis" list
+  // create "noaprsis" list
  String thisnoaprsis = system.getUserConfig()->aprs_is.noaprsis;
   
   for (auto noaprsis:splitstr2v(thisnoaprsis,',')){
-      pathnode pn(noaprsis);
+      shared_ptr<pathnode> pn = make_shared<pathnode> (noaprsis, normalnode);
 
-      if (!pn.valid) {
+      if (!pn->valid) {
         logPrintlnD("Warning: noaprsis callsign " + noaprsis + " does not have a valid format");
       } else {
         _noaprsis.push_back(pn);
       };
   };
+
+
+
+  // check destination
+  String destination_uc = system.getUserConfig()->digi.destination;
+  destination_uc.toUpperCase();
+
+  shared_ptr<pathnode> destination_pn = make_shared<pathnode> (destination_uc, normalnode);
+
+  if (!(destination_pn->valid)) {
+        logPrintD("Error: destination " + destination_uc + " does not have a valid format");
+        _beaconMsg=NULL;
+        return false;
+  };
+
+  // destination should not be in the "invalid call" list
+  if (isinvector(_invalidcall, destination_pn, nocheckssid)) {
+        logPrintD("Error: destination: " + destination_uc + " in in the invalid-call list!");
+        _beaconMsg=NULL;
+        return false;
+  }
 
 
   // setup beacon
@@ -103,31 +119,17 @@ bool RouterTask::setup(System &system) {
   _beaconMsg->setSource(callsign_uc);
 
 
-  // check destination
-  String destination_uc = system.getUserConfig()->digi.destination;
-  destination_uc.toUpperCase();
-
-  pathnode destination_pn(destination_uc);
-
-  if (!(destination_pn.valid)) {
-        logPrintD("Error: destination " + destination_uc + " does not have a valid format");
-        _beaconMsg=NULL;
-        return false;
-  };
-
-  // destination should not be in the "invalid call" list
-  if (isinvector(_invalidcall, destination_pn, false)) {
-        logPrintD("Error: destination: " + destination_uc + " in in the invalid-call list!");
-        _beaconMsg=NULL;
-        return false;
-  }
-
   // destination is OK
   _beaconMsg->setDestination(destination_uc);
 
   String lat = create_lat_aprs(system.getUserConfig()->beacon.positionLatitude);
   String lng = create_long_aprs(system.getUserConfig()->beacon.positionLongitude);
   _beaconMsg->getBody()->setData(String("=") + lat + "L" + lng + "&" + system.getUserConfig()->beacon.message);
+
+
+  // configure message history
+  // should be moved to configuration parameters later on
+  _msghist->configure(1800000, 900000, 10000); // keeptime is 30 minutes, keep_short time is 15 minutes, dup-check is 10 seconds
 
   return true;
 }
@@ -139,7 +141,7 @@ bool RouterTask::setup(System &system) {
 
 bool RouterTask::loop(System &system) {
   // some config variables .. to be moved to the 'configuration' part later
-  int aprsis2RF_wide=1;
+ // int aprsis2RF_wide=1;
 
   bool continueok;
 
@@ -148,16 +150,21 @@ bool RouterTask::loop(System &system) {
   ///////////////////////////
 
 
+
+
   if (!_fromModem.empty()) {
     std::shared_ptr<APRSMessage> modemMsg  = _fromModem.getElement();
     std::shared_ptr<APRSMessage> aprsIsMsg = std::make_shared<APRSMessage>(*modemMsg);
     String                       path      = aprsIsMsg->getPath();
     String                       source    = aprsIsMsg->getSource();
+    String                       dest      = aprsIsMsg->getDestination();
+
+    shared_ptr<aprspath> apath=make_shared<aprspath>(system.getUserConfig()->digi.maxhopnowide); // create aprs path object
+
 
     continueok=true;
 
-
-    // part 1.1: create APRS-IS message (if needed)
+    // part 1.1: create APRS-IS message
 
     // is aprs_is active in the configuration?
     if (!system.getUserConfig()->aprs_is.active) {
@@ -166,32 +173,87 @@ bool RouterTask::loop(System &system) {
     };
 
     // ignore if receiving my own packet
-
-    if (source == system.getUserConfig()->callsign) {
-      logPrintlnD("APRS-IS: no forward => own packet received");
-      continueok=false;
-    }
-
-    // do not iGate to APRS-IS if path contains "RFONLY", "NOGATE" or "TCPIP"
-    if (path.indexOf("RFONLY") != -1 || path.indexOf("NOGATE") != -1 || path.indexOf("TCPIP") != -1) {
-      logPrintlnD("APRS-IS: no forward => RFonly");
-      continueok=false;
+    if (continueok) { // continue if ok
+      if (source == system.getUserConfig()->callsign) {
+        logPrintlnD("APRS-IS: no forward => own packet received");
+        continueok=false;
+      };
     };
 
 
-    // continue if ok
-    if (continueok) {
+    if (continueok) { // continue if OK
+      // create aprspath object based on path (txt) 
+      continueok=apath->appendpathtxttopath(path, _invalidcall);      
+    }
 
-      if (!path.isEmpty()) {
-        path += ",";
+
+    if (continueok) {  // continue if ok
+      // check total path
+      continueok=apath->checkpath();
+      if (!continueok) {
+        logPrintlnD("Error: Checkpath failed");
+        continueok=false;
       }
+    }
 
-      aprsIsMsg->setPath(path + "qAR," + system.getUserConfig()->callsign);
 
+    // check if any element in the path is in the "no-aprsis" list (e.g."NOGATE" or "RFONLY")
+    if (continueok) {  // continue if ok
+      for (auto pn:apath->getpath()) {
+        if (isinvector(_noaprsis,pn,nocheckssid)) {
+          logPrintlnD("APRS-IS: no forward => RFonly");
+          continueok=false;
+          break;
+        }
+      };
+    };
+
+
+    // ignore message if it has already been received during the "dup" periode
+    if (continueok) {
+      if (_msghist->checkexist_dup(aprsIsMsg)) {
+        continueok=false;
+      };
+
+    };
+
+
+    // register message
+    if (continueok) {
+      _msghist->receivemsg(aprsIsMsg,apath->getpathlength());
+    }
+
+    if (continueok) {     // continue if ok
+      // add "qAR" if directly-heared or up to 1 hop away
+      // should be moved to a configuration-variable
+      logPrintD("Pathlength: ");
+      logPrintlnD(apath->printfullpath());
+      logPrintlnD(String(apath->getpathlength()));
+
+      if (apath->getpathlength() <= 1) {
+        shared_ptr<pathnode> pn=make_shared<pathnode>("qAR",specialnode); // create "special" node qAR (bidirectional gateway)
+        apath->appendnodetopath(pn);
+      } else {
+        shared_ptr<pathnode> pn=make_shared<pathnode>("qAO",specialnode); // create "special" node qAO (receive only iGate)
+        apath->appendnodetopath(pn);
+      };
+
+      // next, add callsign to path
+      // remove "digipeat" from my callsign (just to be sure)
+      _callsign_pn->digipeat=false;
+      apath->appendnodetopath(_callsign_pn);
+
+      // create new path
+      aprsIsMsg->setPath(apath->printfullpath());
+      
+      // transmit it
       logPrintD("APRS-IS: ");
+      logPrintlnD(apath->printfullpath());
+      logPrintlnD(source);
+      logPrintlnD(dest);
+      logPrintlnD(apath->printfullpath());
       logPrintlnD(aprsIsMsg->toString());
       _toAprsIs.addElement(aprsIsMsg);
-          
     }
 
 
@@ -199,26 +261,27 @@ bool RouterTask::loop(System &system) {
     // part 1.2: RF digipeat
     continueok=true;
 
-    if (!(system.getUserConfig()->digi.active)) continueok=false;
-    if (modemMsg->getSource() == system.getUserConfig()->callsign) continueok=false;
+    if (!(system.getUserConfig()->digi.active)) continueok=false; // stop if "digi.active" is disabled
+    if (modemMsg->getSource() == system.getUserConfig()->callsign) continueok=false; // stop if my own callsign
 
-    // continue if OK
-    if (continueok) {
+    if (continueok) {     // continue if OK
+
       std::shared_ptr<APRSMessage> digiMsg = std::make_shared<APRSMessage>(*modemMsg);
       String                       path    = digiMsg->getPath();
-      String                       callsign_uc  = system.getUserConfig()->callsign;
-      callsign_uc.toUpperCase();
+
+
+      // find "lowest" message, if in a "3th party data" hierarchy
+      APRSMessage *AMessage = aprsIsMsg->getLowestMessage(); // returns pointer to first 'non-3th party' APRS message
 
       // special case: messagetype = Message
       // check if the message is addressed to me
 
       aprsmsgmsg replymsg = aprsmsgmsg(); // reply message
 
-      if (digiMsg->getType() == APRSMessageType::Message) {
-
-        String body = digiMsg->getRawBody();
+      if (AMessage->getType() == APRSMessageType::Message) {
+        String body = AMessage->getRawBody();
         
-        aprsmsgmsg amsg = aprsmsgmsg(body);
+        aprsmsgmsg amsg = aprsmsgmsg(body); // create "aprs message" message
 
         if (!amsg.valid) {
 
@@ -226,15 +289,15 @@ bool RouterTask::loop(System &system) {
 
         } else  {
 
-          // is this message for me
-          if (_callsign_pn->equalcall(* amsg.callsign, true)) {
+          // is this message for me?
+          if (_callsign_pn->equalcall(amsg.callsign, docheckssid)) {
 
-            // this message is for me
+            // Yes, this message is for me
 
-
-            // send ack (if needed)
+            // if not an 'ack' message (which we ignore)
             if (!amsg.isack) {
 
+              // send ack (if needed)
               if (amsg.hasack) {
                 replymsg.isack=true;
                 replymsg.msgno=amsg.msgno;
@@ -246,16 +309,15 @@ bool RouterTask::loop(System &system) {
                 _toModem.addElement(aprsIsMsg);
               }
 
-
-
             } // end (isack)
+
+            // done :: set 'continueok' to false to stop further execution
+            continueok=false;
 
           } // end (message to me)
 
         } // end (amsg is valid)
 
-        // done :: set 'continueok' to false to stop further execution
-        continueok=false;
 
       }; // end (special case: aprs message)
 
@@ -263,55 +325,34 @@ bool RouterTask::loop(System &system) {
 
 
       // create aprs path
-      aprspath apath(system.getUserConfig()->digi.maxhopnowide);
+      shared_ptr<aprspath> apath = make_shared<aprspath>(system.getUserConfig()->digi.maxhopnowide);
 
-      // continue if ok
-      if (continueok) {
-        // go over list, create aprsapth
-        for (auto thisnode:splitstr2v(path,',')) {
-          pathnode pn=pathnode(thisnode);
-          if (!pn.valid) {
-            logPrintlnD("Error: invalid pathnode " + thisnode + "  ... ignoring packet");
-            continueok=false;
-            break;
-          }
-
-          // check if node is in the "invalid call" list
-          if (isinvector(_invalidcall, pn, false)) {
-            logPrintlnI("Error: pathnode "+thisnode+" is in the invalid-call list");
-            continueok=false;
-            break;
-          }
-
-          apath.appendnodetopath(pn);
-        }; // end for
-
+      if (continueok) {       // continue if ok
+        // create aprspath object based on path (txt) 
+        continueok=apath->appendpathtxttopath(path, _invalidcall);
       }
 
-
-      // continue if ok
-      if (continueok) {
+      if (continueok) {       // continue if ok
         // check total path
-        continueok=apath.checkpath();
+        continueok=apath->checkpath();
         if (!continueok) logPrintlnD("Error: Checkpath failed");
       }
 
 
-      // continue if ok
-      if (continueok) {
+      if (continueok) {       // continue if ok
         // loopcheck
-        continueok=apath.doloopcheck(callsign_uc);        
+        continueok=apath->doloopcheck(_callsign_pn);        
         if (!continueok) logPrintlnD("Error: loopcheck failed");
       }
 
 
 
       // create a pathnode object from the source
-      pathnode p_source = pathnode(source);
+      shared_ptr<pathnode> p_source = make_shared<pathnode>(source, normalnode);
 
       // continue if ok
       if (continueok) {
-        continueok=p_source.valid;
+        continueok=p_source->valid;
         if (!continueok) logPrintlnI("Error: source "+source+" has an invalid format");
       }
 
@@ -319,7 +360,7 @@ bool RouterTask::loop(System &system) {
       if (continueok) {
         // source call should not be in invalid-call list
 
-        if (isinvector(_invalidcall, p_source, false)) {
+        if (isinvector(_invalidcall, p_source, nocheckssid)) {
           logPrintlnI("Error: source "+source+" is in the invalid-call list");
           continueok=false;
         }
@@ -328,45 +369,39 @@ bool RouterTask::loop(System &system) {
 
       // "do not digi" checking: check if "lastnode" or the source is in the "do-not-digi' list
 
-      // continue if ok
-      if (continueok) {
+      if (continueok) {     // continue if ok
         // check the "lastnode" if it exists
         // note: "getlastnode" will only work correctly if a "checkpath" has been done
-        pathnode* ln = apath.getlastnode();
+        shared_ptr<pathnode> * ln = apath->getlastnode();
 
         // if lastnode exist, check if it is the invalid call list
-        if (ln) {
-
-          if (isinvector(_donotdigi,*ln, true)) {
-            logPrintlnD("Error: lastnode " + ln->pathnode2str() + " is in the do-not-digi list");
+        if (ln != nullptr) {
+          if (isinvector(_donotdigi,*ln, docheckssid)) {
+            logPrintlnD("Error: lastnode " + (*ln)->pathnode2str() + " is in the do-not-digi list");
             continueok=false;
           };
-
         } else {
-          // path is empty, check if the source is in the do-not-digi call list
-
-          if (isinvector(_donotdigi, p_source, true)) {
+          // lastnode does not exist, (path is empty)
+          // , check if the source is in the do-not-digi call list
+          if (isinvector(_donotdigi, p_source, docheckssid)) {
             logPrintlnI("Error: source "+source+" is in the do-not-digi list");
             continueok=false;
           };
-
         };
       };
 
 
-      // continue if ok
-      if (continueok) {
+      if (continueok) {       // continue if ok
         // add mycall to path
-        continueok=apath.adddigi(callsign_uc, system.getUserConfig()->digi.fillin);
-        if (!continueok) logPrintlnI("Info: adddigi returnd False for node " + callsign_uc);
+        continueok=apath->adddigi(_callsign_pn, system.getUserConfig()->digi.fillin);
+        if (!continueok) logPrintlnI("Info: adddigi failed for node " + _callsign_pn->pathnode2str());
       };
 
 
-      // continue if ok
-      if (continueok) {
-        // done. create new path
-        logPrintlnD("DIGI NEW PATH: "+ apath.printfullpath());
-        digiMsg->setPath(apath.printfullpath());
+      if (continueok) {       // continue if ok
+        // done. print and transmit new path
+        logPrintlnD("DIGI NEW PATH: "+ apath->printfullpath());
+        digiMsg->setPath(apath->printfullpath());
 
         logPrintlnD("DIGI: "+ digiMsg->toString());
         _toModem.addElement(digiMsg);
@@ -389,132 +424,127 @@ bool RouterTask::loop(System &system) {
     String                       body      = aprsIsMsg->getRawBody();
     String                       dest      = aprsIsMsg->getDestination();
 
+    String msgmsgdest;
+    int destfound;
+
     continueok=true;
 
-    // only formard "message" type of APRSMsgages
-    if (aprsIsMsg->getType() != APRSMessageType::Message) {
-      continueok=false;
-    };
-
-
-    pathnode source_pn = pathnode(source);
-
-    if (!(source_pn.valid)) {
+    std::shared_ptr<pathnode> source_pn = std::make_shared<pathnode> (source, normalnode);
+    //std::shared_ptr<pathnode> source_pn(new pathnode(source, normalnode));
+    if (!(source_pn->valid)) {
       logPrintlnD("APRS-IS MSG: Error: Source message of APRS-IS has invalid format");
       continueok=false;
     }
 
+
+    ////////////////////////////////
     // special case: messagetype = Message
     // check if the message is addressed to me
+    APRSMessage *AMessage = aprsIsMsg->getLowestMessage(); // returns pointer to first 'non-3th party' APRS message
+
+    // only formard "message" type of APRSMsgages
+    if (AMessage->getType() != APRSMessageType::Message) {
+      continueok=false;
+    };
+
+
+    // reset "msg destination", just to be sure
+    msgmsgdest="";
 
     if (continueok) {
-
-      String body = aprsIsMsg->getRawBody();
-      
-      aprsmsgmsg amsg = aprsmsgmsg(body);
-
-      aprsmsgmsg replymsg = aprsmsgmsg(); // reply message
+      String body = AMessage->getRawBody();
+      std::shared_ptr<aprsmsgmsg> amsg = std::make_shared<aprsmsgmsg>(body);
+      std::shared_ptr<aprsmsgmsg> replymsg = std::make_shared<aprsmsgmsg> ();
 
 
-      if (!amsg.valid) {
-
+      if (!amsg->valid) {
         logPrintlnD("aprs-message: invalid format of message");
+        // mark message as invalid
+        continueok=false;
 
       } else  {
 
-
-        
-        logPrintlnD("aprs-message: valid");
-        // is this message for me
-
-        if (amsg.isack) {
-          logPrintlnD("aprs-message: IS ACK");
-        }else {
-          logPrintlnD("aprs-message: NOT IS ACK");
-        }
-
-        if (amsg.hasack) {
-          logPrintlnD("aprs-message: HAS ACK");
-        }else {
-          logPrintlnD("aprs-message: NOT HAS ACK");
-        }
-
-        if (_callsign_pn->equalcall(*(amsg.callsign), true)) {
-          logPrintlnD("aprs-message: EQUAL");
-        } else {
-          logPrintlnD("aprs-message: NOT EQUAL");
-        }
-
-        if (_callsign_pn->equalcall(*(amsg.callsign), true)) {
-          logPrintlnD("aprs-message: for ME");
-
- 
-
-
+        if (_callsign_pn->equalcall((amsg->callsign), true)) {   
           // this message is for me
-
           // 1: send ack (if needed)
 
           // ignore "ack" messages (step 3)
-          if (!amsg.isack) {
-
+          if (!amsg->isack) {
             // create reply message
-            replymsg.callsign=&source_pn;; // reply back to original sender
-
-            replymsg.valid=true;
+            replymsg->callsign=source_pn;; // reply back to original sender
+            replymsg->valid=true;
   
-
-
             // send ack (if needed) (step 1)
-            if (amsg.hasack) {
-              replymsg.isack=true;
-              replymsg.msgno=amsg.msgno;
-              aprsIsMsg->getBody()->setData(replymsg.fulltxt());
-              logPrintlnD(replymsg.fulltxt());
+            if (amsg->hasack) {
+              replymsg->isack=true;
+              replymsg->msgno=amsg->msgno;
+              aprsIsMsg->getBody()->setData(replymsg->fulltxt());
+              logPrintlnD(replymsg->fulltxt());
 
+              aprsIsMsg->setPath("");
               aprsIsMsg->setSource(_callsign_pn->pathnode2str());
               aprsIsMsg->setDestination(system.getUserConfig()->digi.destination);
               _toAprsIs.addElement(aprsIsMsg);
             }
 
-
           } // end (isack)
-
 
           // done :: set 'continueok' to false to stop further execution
           continueok=false;
+        }; // end (message to me)
 
+        // store msgmsg destination (we will need it later)
+        msgmsgdest=amsg->callsign->pathnode2str();
 
-        } // end (message to me)
 
       } // end (amsg is valid)
+    }; // continueok
 
+    // the message is not directed to me, forward to RF if the destination has been heared on the RF side
 
-    }; // end (special case: aprs message)
+    if (continueok) {
+      destfound=_msghist->checkexist_sender(msgmsgdest);
 
+      // check if the destination of the message is known on RF
+      // if not, stop further processing
+      if (destfound==found_notfound) {
+        logPrintlnI("APRSIS-IN: Received message to unknown destination"+source+" "+path+" "+dest+ " "+body);
+        continueok=false;
+      } 
+    }
 
 
     // continue if OK  
     if (continueok){
-      String newpath="TCPIP," + _callsign_pn->pathnode2str() + "*,";
+      logPrintlnI("APRSIS-IN: "+source+" "+path+" "+dest+ " " + destfound + " " +body);
 
+      // create thirdParty Message: a copy of the original text with modified path
+      aprsIsMsg->getBody()->setData("}"+source+">"+dest+",TCPIP,"+_callsign_pn->pathnode2str() + "*:" + body);
+      aprsIsMsg->setDestination(system.getUserConfig()->digi.destination);
+      aprsIsMsg->setSource(_callsign_pn->pathnode2str());
+
+
+      /*
       if (aprsis2RF_wide==0) {
-        newpath += "WIDE1-0";
+        aprsIsMsg->setPath("WIDE1-0");
       } else {
-        newpath += "WIDE1-1";
+        aprsIsMsg->setPath("WIDE1-1");
       }
+      */
 
-      logPrintlnI("APRSIS: "+source+" "+path+" "+dest+ " "+body);
+      // this has to be corrected in the future
+      // distance should the distance as received when "found_shortdist"
+      // else, if found later, go to WIDE1-1
+      aprsIsMsg->setPath("WIDE1-0");
 
-      // quick hack to see if it works!
-      // we only need to change the path and send out the message over the Lora RF interface
-      logPrintlnI("APRSIS2RF NEW PATH: "+newpath);
-      aprsIsMsg->setPath(newpath);
+      logPrintlnI("APRSIS2RF: "+source+" "+path+" "+dest+ " "+body);
 
       logPrintlnI("DIGI: "+ aprsIsMsg->toString());
       _toModem.addElement(aprsIsMsg);
-    }
 
+      // add message into msghistory, for duplicate-message detection
+      _msghist->receivemsg(aprsIsMsg,1);
+    }
 
    };
  
@@ -533,7 +563,6 @@ bool RouterTask::loop(System &system) {
       }
 
       system.getDisplay().addFrame(std::shared_ptr<DisplayFrame>(new TextFrame("BEACON", _beaconMsg->toString())));
-
       _beacon_timer.start();
     }
 

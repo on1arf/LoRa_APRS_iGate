@@ -2,9 +2,13 @@
 
 #include <aprspath.h>
 
+#include <memory>
+
+using std::shared_ptr;
+
 class aprsmsgmsg {
 public:
-    pathnode * callsign;
+    shared_ptr<pathnode> callsign;
 
     String body;
     bool hasack;
@@ -17,7 +21,7 @@ public:
 
     aprsmsgmsg ();
     aprsmsgmsg (String msgin);
-    ~aprsmsgmsg ();
+
 
     String fulltxt ();
 

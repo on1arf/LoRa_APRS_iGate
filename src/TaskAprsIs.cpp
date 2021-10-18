@@ -52,7 +52,7 @@ bool AprsIsTask::loop(System &system) {
 
   if (!_toAprsIs.empty()) {
     std::shared_ptr<APRSMessage> msg = _toAprsIs.getElement();
-    logPrintlnI("APRS-IS sending: "+msg->getBody()->getData());
+    logPrintlnI("APRS-IS sending: "+msg->getSource()+" "+msg->getDestination()+" "+msg->getPath()+" "+msg->getBody()->getData());
 
     _aprs_is.sendMessage(msg);
   }

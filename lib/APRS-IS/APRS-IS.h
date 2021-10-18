@@ -18,6 +18,7 @@ public:
 
   int available();
 
+
   String                       getMessage();
   std::shared_ptr<APRSMessage> getAPRSMessage();
 

@@ -55,6 +55,8 @@ bool APRS_IS::sendMessage(const std::shared_ptr<APRSMessage> message) {
     return false;
   }
   _client.println(message->encode() + "\n");
+  logPrintlnE("APRS_IS SendMessage:");
+  logPrintlnE(message->encode() + "\n");
   return true;
 }
 

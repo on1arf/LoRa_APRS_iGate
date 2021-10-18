@@ -1,0 +1,100 @@
+Task ROUTING (as adapted by Kristoff Bonne (ON1ARF))
+-----------------------------------------------------
+
+Setup:
+
+_callsign_pn
+	-> check if valid
+
+invalid-call list
+	-> callsign not in invalid call list
+
+do-not-digi list
+	-> callsign not in do-not-digi list
+	
+no-aprsis list
+
+destination
+	-> destination not in invalid-call list
+	
+_beacon
+
+
+***********
+
+Loop:
+
+1/ fromModem (RF):
+
+1.0:
+Check for dups:
+has this packet been received during the last "dup" periode?
+
+
+
+1.1 To APRS_IS
+	is aprs_is active
+	ignore own packet
+	create path
+		check total path
+		check if no element in path in "no-aprsis" list
+	
+	# OK from here on:
+	add "qAR" or "qAU" to path, depending on distance
+	add _callsign to path
+	create APRS_IS message + sent
+	
+1.2 RF digipeat:
+	is digi active?
+	ignore own packet
+
+	for "msgmsg":
+		find lowest-level message
+		create "amsg"
+		check if valid
+		if message addressed to me:
+			ignore "ack" mesaage
+			for other meesage -> just sent "ack" to source
+
+	create path
+		check total path
+		loop-check
+	
+	check source
+		source valid
+		source not in invalid-call list
+	
+	find "lastnode"
+		lastnode not in do-not-digi
+	if no "lastnode"
+		source not in do-not-digi
+	
+	add _callsign to path
+	if not "do-not-digi":
+		sent message
+		
+2: From APRS-IS:
+	create source_pn from source-callsign
+	check if source_pn is valid
+	
+	find lowest-level message
+	stop if not a "msgmsg" message
+	
+	check if msgmsg is valid
+	
+	if message addressed to me:
+		ignore "ack" message
+		for other message -> just send "ack" to source
+
+	# forward "msgmsg" message not addresses to me to RF
+	check if sender is known on RF -> if not: ignore
+	
+	create newpath "TCPIP,<mycall>*,WIDE..'
+	apply new path
+	sent message to LoRa modem
+	
+3: beacon:
+	check timer
+	send beacon-message to aprs_is (if enabled)
+	send beacon-message to LoRa modem (if enabled)
+

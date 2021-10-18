@@ -1,13 +1,12 @@
 #include <aprspath.h>
 
-//#define _GLIBCXX_USE_C99
-
 #include <iostream>
-//#include <string>
 #include <WString.h>
 #include <list>
 #include <cstring>
 #include <vector>
+
+#include <memory>
 
 #include <locale>
 
@@ -15,16 +14,23 @@
 
 
 using std::vector;
-//using std::string;
-
 using std::list;
+using std::shared_ptr;
+using std::make_shared;
 
 
-// APRS path parser, based on   
+pathnode::pathnode () {
+    configured=false;
+}
 
 
+pathnode::pathnode (String callsign_in, bool isspecial) {
+    configured=false;
+    configure(callsign_in,isspecial);
+}
 
-pathnode::pathnode (String callsign_in){
+
+void pathnode::configure (String callsign_in, bool isspecial){
     String thiscall;
 
     size_t p;
@@ -39,7 +45,8 @@ pathnode::pathnode (String callsign_in){
     wide=false;
     widetotal=0;
     wideremain=0;
-
+    special=isspecial;
+    configured=true;
 
     // special code for empty callsigns
     if (callsign_in.isEmpty()) {
@@ -47,7 +54,17 @@ pathnode::pathnode (String callsign_in){
         return;
     }
     
-    
+
+    // special clause "Special". just add without checks
+    // is used for pathnodes like "qAR" or "TCPIP"
+    // All data is stored in the "callsign" part, essid field is not used
+    if (isspecial) {
+        callsign=callsign_in;
+        valid=true;
+        return;
+    }
+
+
 
     thiscall=callsign_in;
     thiscall.toUpperCase(); // make uppercase
@@ -100,6 +117,9 @@ pathnode::pathnode (String callsign_in){
         callsign=thiscall.substring(0,p);
         l=p; // reduce length to the part before the '-'
     }
+
+    logPrintlnD("callsign: "+callsign);
+    logPrintlnD("ssid: "+String(ssid));
 
 
     // at this point, we should have a fully alphanumeric callsign
@@ -162,8 +182,8 @@ pathnode::pathnode (String callsign_in){
 }
 
 
-bool pathnode::equalcall(pathnode d, bool checkssid){
-    if ((callsign==d.callsign) && ((!checkssid) || (ssid==d.ssid))) {
+bool pathnode::equalcall(shared_ptr<pathnode> d, bool checkssid){
+    if ((callsign==d->callsign) && ((!checkssid) || (ssid==d->ssid))) {
         return true;
     }
 
@@ -184,21 +204,33 @@ String pathnode::pathnode2str() {
 };
 
 
+aprspath::aprspath() {
+    configured=false;
+};
+
+
 aprspath::aprspath(int maxhopnw) {
+    configured=false;
+    configure(maxhopnw);
+};
+
+void aprspath::configure(int maxhopnw) {
     verified=false;
     path.clear();
-    lastnode=NULL;
-    wi[0]=NULL;
-    wi[1]=NULL;
+    lastnode=nullptr;
+    wi[0]=nullptr;
+    wi[1]=nullptr;
     wicount=0;
     nodecount=0;
     maxhopnowide=maxhopnw;
+    pathlength=0;
+    configured=true;
 }
 
 
 
-bool aprspath::appendnodetopath(pathnode p) {
-    if (!p.valid) {
+bool aprspath::appendnodetopath(shared_ptr<pathnode> p) {
+    if (!p->valid) {
         logPrintlnD("Error appendnodetopath: Trying to add non-valid pathnode to aprspath");
         return(false);
     }; 
@@ -212,17 +244,45 @@ bool aprspath::appendnodetopath(pathnode p) {
 
 }
 
+bool aprspath::appendpathtxttopath(String p, vector<shared_ptr<pathnode>>  invalidcalllist) {
+
+    for (auto thisnode:splitstr2v(p,',')) {
+        shared_ptr<pathnode> pn=make_shared<pathnode>(thisnode, normalnode);
+        if (!pn->valid) {
+        logPrintlnD("Error: invalid pathnode " + thisnode + "  ... ignoring packet");
+        return false;
+        }
+
+        // check if node is in the "invalid call" list
+        if (isinvector(invalidcalllist, pn, docheckssid)) {
+        logPrintlnI("Error: pathnode "+thisnode+" is in the invalid-call list");
+        return false;
+        }
+
+        appendnodetopath(pn);
+    }; // end for
+
+    // done
+    return true;
+} 
+
+
+
+
 bool aprspath::checkpath() {
+    // reinit
+    pathlength=0;
 
 
     // go through all elements of the list, find all WIDE pathnodes
     wicount=0;
 
-    std::list<pathnode>::iterator it;
-    for (it = path.begin(); it != path.end(); ++it){        
-        if (it->wide) {
+    std::list<shared_ptr<pathnode>>::iterator it;
+    for (it = path.begin(); it != path.end(); ++it){  
+         
+        if ((*it)->wide) {
             if (wicount < 2) {
-                wi[wicount]=&(*it);
+                wi[wicount]=(*it);
             };
             wicount+=1;
 
@@ -230,9 +290,14 @@ bool aprspath::checkpath() {
         } else {
             // set "lastnode" to the last node that is not a "wide"
             lastnode=&(*it);
+
+            // pathlength is number of non-wide hops
+            pathlength++;
         };
 
-        
+        logPrintlnD("Pathnode " + (*it)->callsign);
+        logPrintlnD("pathlength "+String(pathlength));
+
     }
 
     // maximum two WIDE nodes in the path 
@@ -256,33 +321,18 @@ bool aprspath::checkpath() {
 }
 
 
-bool aprspath::doloopcheck (String mycall) {
-    // create pathnode object based on mycall
-    pathnode p(mycall);
+bool aprspath::doloopcheck (shared_ptr<pathnode> call_pn) {
 
-    if (!p.valid) {
-        logPrintD("Error doloopcheck: call ");
-        logPrintD(mycall);
-        logPrintlnD(" is not non-valid");
-        return(false);
-    }
-    
-    std::list<pathnode>::iterator it;
+    std::list<shared_ptr<pathnode>>::iterator it;
     for (it = path.begin(); it != path.end(); ++it) {   
-        if (p.equalcall(*it, true)) return false;
+        if (call_pn->equalcall(*it, docheckssid)) return false;
     }
     return true;
 }
 
-bool aprspath::adddigi (String mycall, bool fillin){
-    pathnode p(mycall);
+bool aprspath::adddigi (shared_ptr<pathnode> p, bool fillin){
 
-    if (!p.valid) {
-        logPrintlnD("Error adddigi: mycall has an invalid format");
-        return(false);
-    }
-
-    p.digipeat=true;  // mark current node as a digipeater
+    p->digipeat=true;  // mark current node as a digipeater
 
 
     // check if the path has been verified
@@ -291,13 +341,21 @@ bool aprspath::adddigi (String mycall, bool fillin){
         return false;
     }
 
+    // check if the path has been verified
+    if (!configured) {
+        logPrintlnD("Error adddigi: Path object is not yet configured");
+        return false;
+    }
+
+
+
     if (wicount==0) {
         // senario 1: no "WIDE" nodes
         // if less then "maxhopnowide" nodes: add pathnode to the end, mark it as digipeat
         // else, refuse
         // note, non-WIDE paths are processed identically, both by wide and fill-in digipeaters
         if (nodecount >= (maxhopnowide)){
-            logPrintlnD("Warning adddigi/nowide: Already the maximum number of nodes.");
+            logPrintlnD("Warning adddigi/nowide: maximum number of hops in path reached.");
             // cannot be added, DONE
             return(false);
         }
@@ -323,12 +381,12 @@ bool aprspath::adddigi (String mycall, bool fillin){
     // note: if the first WIDE is marked as digipeater, this should be consider as 'remain=0'  
     if ((wi[0]->wideremain > 0) && (!wi[0]->digipeat)) {
 
-        std::list<pathnode>::iterator it;
+        std::list<shared_ptr<pathnode> >::iterator it;
         for (it = path.begin(); it != path.end(); ++it){        
-            if (&(*it) == wi[0]) {
+            if ((*it) == wi[0]) {
                 // make the WIDE node digipeater for WIDE1, or WIDE2 if remain is  0 at the end (i.e. is currently 1 )
                 if ((wi[0]->widetotal == 1) || (wi[0]->wideremain == 1)) {
-                    it->digipeat=true;
+                    (*it)->digipeat=true;
                 }
 
                 // only decrease wideremain for the "WIDE" digipeaters (not for fill-in nodes)
@@ -363,14 +421,14 @@ bool aprspath::adddigi (String mycall, bool fillin){
         wi[1]->wideremain-=1;
 
 
-        std::list<pathnode>::iterator it;
+        std::list<shared_ptr<pathnode> >::iterator it;
         for (it = path.begin(); it != path.end(); ++it){
-            if (&(*it) == wi[1]) {
+            if ((*it) == wi[1]) {
                 path.insert(it,p);
 
                 // make the WIDE node digipeater if remain is 0
                 if (wi[1]->wideremain == 0) {
-                    it->digipeat=true;
+                    (*it)->digipeat=true;
                 }
                 break;
             };
@@ -391,32 +449,37 @@ String aprspath::printfullpath() {
     String ret = "";
     int nodecount=0;
 
-    std::list<pathnode>::iterator it;
+    std::list<shared_ptr<pathnode> >::iterator it;
     for (it = path.begin(); it != path.end(); ++it) {        
-        pathnode p = *it;
+        shared_ptr<pathnode>  p = *it;
 
         if (nodecount > 0) {ret += ",";}
         nodecount += 1;
 
         // call
-        ret += p.callsign;
+        ret += p->callsign;
 
+        // a "special" pathnode just has its callsign, no ssid or digipeat indication
 
-        if (p.wide) {
-            // "WIDE" call -> check wideremain
-            if (p.wideremain != 0) {
-                ret += ("-" + String(p.wideremain));
-            };
-        } else {
-            // not a "WIDE" call -> check ssid
-            if (p.ssid != 0) {
-                ret += ("-" + String(p.ssid));
-            };
-        }
+        if (!p->special) {
 
-        if (p.digipeat) {
-            ret += "*";
-        }
+            if (p->wide) {
+                // "WIDE" call -> check wideremain
+                if (p->wideremain != 0) {
+                    ret += ("-" + String(p->wideremain));
+                };
+            } else {
+                // not a "WIDE" call -> check ssid
+                if (p->ssid != 0) {
+                    ret += ("-" + String(p->ssid));
+                };
+            }
+
+            if (p->digipeat) {
+                ret += "*";
+            }
+
+        }; // end not special
     }
 
     return(ret);
@@ -424,13 +487,22 @@ String aprspath::printfullpath() {
 
 
 
-pathnode * aprspath::getlastnode() {
+shared_ptr<pathnode> * aprspath::getlastnode() {
     return lastnode;
 }
 
+int aprspath::getpathlength() {
+    return pathlength;
+}
+
+
+list<shared_ptr<pathnode> > aprspath::getpath() {
+    return path;
+}
+
+
 /////////////////////////
 // some support functions
-
 
 
 vector<String> splitstr2v(String in, char token) {
@@ -458,10 +530,10 @@ vector<String> splitstr2v(String in, char token) {
 
 
 
-bool isinvector(vector <pathnode> pathvector, pathnode element, bool checkssid) {
+bool isinvector(vector <shared_ptr<pathnode> > pathvector, shared_ptr<pathnode>  element, bool checkssid) {
 
     for(auto thisnode:pathvector) {
-        if (thisnode.equalcall(element, checkssid)) return true;
+        if (thisnode->equalcall(element, checkssid)) return true;
     }
     return false;
 

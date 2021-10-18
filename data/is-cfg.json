@@ -1,10 +1,10 @@
 {
-	"callsign": "ON1ARF-13",
+	"callsign": "ON1ARF-11",
 	"wifi": {
 		"AP": [
 			{
-				"SSID": "XXXX",
-				"password": "XXXX"
+				"SSID": "itchy2_EXT",
+				"password": "Lisa1997"
 			}
 		]
 	},
@@ -18,7 +18,7 @@
 	},
 	"aprs_is": {
 		"active": true,
-		"passcode": "00000",
+		"passcode": "24491",
 		"server": "euro.aprs2.net",
 		"port": 14580,
 		"noaprsis": "RFONLY,NOGATE,TCPIP"
@@ -27,9 +27,9 @@
 		"active": true,
 		"beacon": true,
 		"fillin": false,
-		"maxhopnowide": 3,
+		"maxhopnowide": 1,
 		"invalidcalls": "NOCALL,INVALID",
-		"donotdigi": "",
+		"donotdigi": "ON1TG-13",
 		"destination": "APLG02"
 	},
 	"lora": {

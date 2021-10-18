@@ -3,7 +3,7 @@
 #include <aprspath.h>
 #include <aprsmsgmsg.h>
 
-
+using std::make_shared;
 
 // aprs "message" messages: "chat" type messages, officially called messagetype "message"
 // to avoid confusing with the APRS Messages themself, use the term "aprsmsgmsg"
@@ -22,7 +22,8 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
     isrej=false;
     msgno="";
     body="";
-    callsign=nullptr;
+    callsign=make_shared<pathnode>();
+
 
 
     // expected format:
@@ -64,7 +65,8 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
     l=msgrest.length();
 
     // convert callsign into pathnode object -> easier to check if the callsign is valid
-    callsign = new pathnode(callsign_in);
+    // the callsign object has already been created above, so just create it
+    callsign->configure(callsign_in, normalnode);
     // std::auto_ptr<pathnode> callsign(new pathnode) // Is this correct? 
 
 
@@ -105,7 +107,7 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
         // maximum length body is 67 characters and can be empty
         // maximum length msgno is 5 characters but cannot be empty
         if (body.length() > 67) {
-            logPrintlnD("APRSMSGMSG Error: boddy to long");
+            logPrintlnD("APRSMSGMSG Error: body to long");
         }
         if (msgno.length() > 5) {
             logPrintlnD("APRSMSGMSG Error: msgno to long");
@@ -176,11 +178,6 @@ aprsmsgmsg::aprsmsgmsg () {
 };
 
 
-
-aprsmsgmsg::~aprsmsgmsg () {
-    // delete pathnode object if it exists
-    if (!(callsign = nullptr)) delete callsign;
-};
 
 
 

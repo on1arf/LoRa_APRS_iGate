@@ -3,15 +3,23 @@
 
 
 #include <iostream>
-//#include <string>
 #include <WString.h>
 #include <list>
 #include <vector>
 
-using std::vector;
-//using std::string;
-using std::list;
+#include <memory>
 
+using std::vector;
+using std::list;
+using std::shared_ptr;
+
+
+#define normalnode false
+#define specialnode true
+
+
+#define docheckssid true
+#define nocheckssid false
 
 // APRS message parser, based on http://wa8lmf.net/DigiPaths/
 // header file
@@ -19,6 +27,7 @@ using std::list;
 
 class pathnode {
 public:
+    bool special;
     String callsign;
     int ssid;
     bool digipeat;
@@ -26,9 +35,12 @@ public:
     bool wide;
     int widetotal;
     int wideremain;
+    bool configured;
 
-    pathnode (String callsign_in);
-    bool equalcall(pathnode d, bool checkssid);
+    pathnode ();
+    pathnode (String callsign_in, bool isspecial);
+    void configure (String callsign_in, bool isspecial);
+    bool equalcall(shared_ptr<pathnode> d, bool checkssid);
     String pathnode2str();
 };
 
@@ -39,26 +51,37 @@ public:
 class aprspath {
 private:
     bool verified;
-    list<pathnode> path;
-    pathnode * lastnode;
-    pathnode *wi[2];
+    list<shared_ptr<pathnode>> path;
+    shared_ptr<pathnode> *lastnode;
+    shared_ptr<pathnode> wi[2];
     int wicount;
     int nodecount;
     int maxhopnowide;
+    int pathlength; // number of non-wide hops in a path
+    bool configured; // if object is configured (via 'config' or constructor)
+
 
 public:
+    aprspath();
     aprspath(int maxhopnw);
+    void configure(int maxhopnw);
 
-    pathnode * getlastnode();
 
-    bool appendnodetopath(pathnode p);
+    shared_ptr<pathnode> * getlastnode();
+
+    bool appendnodetopath(shared_ptr<pathnode> p);
+    bool appendpathtxttopath(String p, vector<shared_ptr<pathnode>>  invalidcalllist); 
     bool checkpath();
 
-    bool doloopcheck (String mycall);
+    bool doloopcheck (shared_ptr<pathnode> call_pn);
 
-    bool adddigi (String mycall, bool fillin);
+    bool adddigi (shared_ptr<pathnode> p, bool fillin);
 
     String printfullpath();
+
+    int getpathlength();
+
+    list<shared_ptr<pathnode>> getpath();
 };
 
 
@@ -67,7 +90,7 @@ public:
 
 vector<String> splitstr2v(String in, char token);
 
-bool isinvector(vector <pathnode> pathvector, pathnode element, bool checkssid); 
+bool isinvector(vector <shared_ptr<pathnode>> pathvector, shared_ptr<pathnode> element, bool checkssid); 
 bool strisalphanum(String s);
 
 #endif
