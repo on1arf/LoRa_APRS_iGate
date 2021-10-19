@@ -18,6 +18,9 @@ Changes:
 - Also applied more strict checks on callsigns.
 - moved the "destination" information from source-code to configuration
 
+0.2.0:
+- implemented APRS-IS to RF gateway for messages of type "message"
+
 
 ## Original "README":
 
