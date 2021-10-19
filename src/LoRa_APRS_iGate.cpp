@@ -20,7 +20,7 @@
 #include "TaskWifi.h"
 #include "project_configuration.h"
 
-#define VERSION "21.25.0"
+#define VERSION "21.25.0/ON1ARF0.2.0"
 
 String create_lat_aprs(double lat);
 String create_long_aprs(double lng);
@@ -52,6 +52,7 @@ void setup() {
   logPrintlnI("Modified ON1ARF (Kristoff Bonne)");
   logPrintlnI("Version 0.1.0 .. added digipeating path handling");
   logPrintlnI("Version 0.1.1 .. added donotdigi and other callsign checks");
+  logPrintlnI("Version 0.2.0 .. added APRS-IS to RF gateway plus");
   
 
 
