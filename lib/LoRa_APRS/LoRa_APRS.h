@@ -7,6 +7,7 @@
 #include <LoRa.h>
 #include <memory>
 
+
 class LoRa_APRS : public LoRaClass {
 public:
   LoRa_APRS();
