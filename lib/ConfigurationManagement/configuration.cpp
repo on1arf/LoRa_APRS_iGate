@@ -16,6 +16,8 @@ ConfigurationManagement::~ConfigurationManagement() {
 }
 
 void ConfigurationManagement::readConfiguration(Configuration &conf) {
+  logPrintlnI("Reading configuration from SPIFFS");
+
   File file = SPIFFS.open(mFilePath);
   if (!file) {
     logPrintlnE("Failed to open file for reading, using default configuration.");
@@ -33,10 +35,13 @@ void ConfigurationManagement::readConfiguration(Configuration &conf) {
   readProjectConfiguration(data, conf);
 
   // update config in memory to get the new fields:
-  writeConfiguration(conf);
+  // Removed by ON1ARF
+  // writeConfiguration(conf);
 }
 
 void ConfigurationManagement::writeConfiguration(Configuration &conf) {
+  logPrintlnI("Wrting configuration to SPIFFS");
+
   File file = SPIFFS.open(mFilePath, "w");
   if (!file) {
     logPrintlnE("Failed to open file for writing...");

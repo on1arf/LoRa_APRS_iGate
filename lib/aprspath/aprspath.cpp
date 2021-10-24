@@ -118,8 +118,8 @@ void pathnode::configure (String callsign_in, bool isspecial){
         l=p; // reduce length to the part before the '-'
     }
 
-    logPrintlnD("callsign: "+callsign);
-    logPrintlnD("ssid: "+String(ssid));
+    //logPrintlnD("callsign: "+callsign);
+    //logPrintlnD("ssid: "+String(ssid));
 
 
     // at this point, we should have a fully alphanumeric callsign

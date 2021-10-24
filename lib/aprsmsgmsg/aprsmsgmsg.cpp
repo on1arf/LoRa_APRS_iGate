@@ -188,6 +188,11 @@ String aprsmsgmsg::fulltxt () {
     if (!valid) return "";
 
 
+    if (callsign == nullptr) {
+        logPrintlnD("aprsmsgmsg error: callsign not initalised");
+        return "";
+    }
+
     out=callsign->callsign;
 
     if (callsign->ssid != 0) {
@@ -202,15 +207,16 @@ String aprsmsgmsg::fulltxt () {
     if (isrej) return (":"+out+":rej"+msgno);
 
 
-
     // message is :callsign:body
     out=":"+out+":" + body;
 
 
     // is there a ack-marker?
     if (hasack) {
+
         out += ("{" + msgno);
     };
-    
+
+
     return out;
 }
