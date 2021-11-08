@@ -3,6 +3,9 @@
 #include "TaskDisplay.h"
 #include "project_configuration.h"
 
+using std::shared_ptr;
+using std::make_shared;
+
 DisplayTask::DisplayTask() : Task("DisplayTask", 0) {
 }
 
@@ -14,7 +17,7 @@ bool DisplayTask::setup(System &system) {
   if (system.getUserConfig()->display.turn180) {
     system.getDisplay().turn180();
   }
-  std::shared_ptr<StatusFrame> statusFrame = std::shared_ptr<StatusFrame>(new StatusFrame(system.getTaskManager().getTasks()));
+  shared_ptr<StatusFrame> statusFrame = make_shared<StatusFrame>(system.getTaskManager().getTasks());
   system.getDisplay().setStatusFrame(statusFrame);
   if (!system.getUserConfig()->display.alwaysOn) {
     system.getDisplay().activateDisplaySaveMode();

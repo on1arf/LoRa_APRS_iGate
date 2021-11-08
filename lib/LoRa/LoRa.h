@@ -90,11 +90,14 @@ public:
 
   void dumpRegisters(Stream& out);
 
+  bool isChannelBusy();
+  bool isTransmitting();
+
+
+
 private:
   void explicitHeaderMode();
   void implicitHeaderMode();
-
-  bool isTransmitting();
 
   int getSpreadingFactor();
   long getSignalBandwidth();
@@ -114,6 +117,8 @@ private:
   long _frequency;
   int _packetIndex;
   int _implicitHeaderMode;
+
+  //unsigned long tslastchanbusycheck; // used by "endpacket" for bussy-channel detection
 };
 
 #endif

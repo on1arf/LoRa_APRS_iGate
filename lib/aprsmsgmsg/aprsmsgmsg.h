@@ -11,10 +11,11 @@ public:
     shared_ptr<pathnode> callsign;
 
     String body;
-    bool hasack;
+    bool hasackreq;
     bool isack;
     bool isrej;
     String msgno;
+    String msgno2;
 
     bool valid;
 

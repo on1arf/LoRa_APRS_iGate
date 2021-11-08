@@ -6,16 +6,19 @@
 #include <APRS-Decoder.h>
 #include <LoRa.h>
 #include <memory>
+#include <deque>
 
+using std::shared_ptr;
+using std::deque;
 
 class LoRa_APRS : public LoRaClass {
 public:
   LoRa_APRS();
 
   bool                         checkMessage();
-  std::shared_ptr<APRSMessage> getMessage();
+  shared_ptr<APRSMessage> getMessage();
 
-  void sendMessage(const std::shared_ptr<APRSMessage> msg);
+  void sendMessage(const shared_ptr<APRSMessage> msg);
 
   void setRxFrequency(long frequency);
   long getRxFrequency() const;
@@ -24,9 +27,9 @@ public:
   long getTxFrequency() const;
 
 private:
-  std::shared_ptr<APRSMessage> _LastReceivedMsg;
-  long                         _RxFrequency;
-  long                         _TxFrequency;
+  deque<shared_ptr<APRSMessage>>      _ReceivedMsgQueue;
+  long                                 _RxFrequency;
+  long                                 _TxFrequency;
 };
 
 #endif

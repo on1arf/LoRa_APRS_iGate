@@ -4,7 +4,10 @@
 #include "TaskAprsIs.h"
 #include "project_configuration.h"
 
-AprsIsTask::AprsIsTask(TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<std::shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_APRS_IS, TaskAprsIs), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs) {
+using std::shared_ptr;
+using std::make_shared;
+
+AprsIsTask::AprsIsTask(TaskQueue<shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_APRS_IS, TaskAprsIs), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs) {
 }
 
 AprsIsTask::~AprsIsTask() {
@@ -39,7 +42,7 @@ bool AprsIsTask::loop(System &system) {
     logPrintlnI("APRS-IS Received: "+rcvdmsg);
 
     if (!(rcvdmsg.startsWith("#"))) {
-      std::shared_ptr<APRSMessage> msgout = std::shared_ptr<APRSMessage>(new APRSMessage());
+      shared_ptr<APRSMessage> msgout = make_shared<APRSMessage>();
       msgout->decode(rcvdmsg);
  
       // send to the _FromAprsIS queue if OK
@@ -51,7 +54,7 @@ bool AprsIsTask::loop(System &system) {
   
 
   if (!_toAprsIs.empty()) {
-    std::shared_ptr<APRSMessage> msg = _toAprsIs.getElement();
+    shared_ptr<APRSMessage> msg = _toAprsIs.getElement();
     logPrintlnI("APRS-IS sending: "+msg->getSource()+" "+msg->getDestination()+" "+msg->getPath()+" "+msg->getBody()->getData());
 
     _aprs_is.sendMessage(msg);

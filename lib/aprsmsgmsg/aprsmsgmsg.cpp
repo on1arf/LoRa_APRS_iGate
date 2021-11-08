@@ -17,10 +17,11 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
 
     // start conditions
     valid=false;
-    hasack=false;
+    hasackreq=false;
     isack=false;
     isrej=false;
     msgno="";
+    msgno2="";
     body="";
     callsign=make_shared<pathnode>();
 
@@ -28,6 +29,8 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
 
     // expected format:
     // :callsign-15:message{01
+    // or
+    // :callsign-15:message{01}02
     // the callsign path should be exactly 9 characters
     if (msgin.length() < 11) {
         logPrintlnD("APRSMSGMSG Error: EMPYT");
@@ -105,14 +108,9 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
 
 
         // maximum length body is 67 characters and can be empty
-        // maximum length msgno is 5 characters but cannot be empty
         if (body.length() > 67) {
             logPrintlnD("APRSMSGMSG Error: body to long");
-        }
-        if (msgno.length() > 5) {
-            logPrintlnD("APRSMSGMSG Error: msgno to long");
-        }
-        if ((body.length() <= 67) && (msgno.length() <= 5)) {
+        } else {
             // OK, we have a valid message!
             valid=true;
         }
@@ -139,7 +137,41 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
     // split the "message into the body and the msgno
     body=msgrest.substring(0,tmp); // body is part in front of the "{"
     msgno=msgrest.substring(tmp+1); // msgno of part after the "{"
-    hasack=true;
+    hasackreq=true;
+
+
+    if (msgno.indexOf(" ") != -1) {
+        logPrintlnD("APRSMSGMSG Error: Message identifier should not contain any spaces");
+        return; // break out (note: message is still marked as not valid)
+    }
+
+    // does the msgno contain a "}" (for a combined "hasackreq"/"hasack" message)
+    tmp=msgno.indexOf("}");
+
+    // extra check: there should be something after the "}"
+    if (tmp == l-1) {
+        logPrintlnD("APRSMSGMSG Error: Additional msgno missing");
+        return;
+    }                       // break out "{" found at the last character of the message
+                            // (note: l = length -> starts at 1, "tmp" is indexof -> starts at 0
+
+    // extra check: look for 2nd "}" (should not exist)
+    if (msgno.substring(tmp+1).indexOf("}") != -1) {
+        logPrintlnD("APRSMSGMSG Error: multiple } found");
+        return; // break out (note: message is still marked as not valid)
+    }; 
+
+
+    msgno=msgno.substring(0,tmp); // msgno is part in front of the "}"
+    msgno2=msgno.substring(tmp+1); // msgno2 of part after the "}"
+    isack=true;
+
+    if (msgno2.indexOf(" ") != -1) {
+        logPrintlnD("APRSMSGMSG Error: Additional Message identifier should not contain any spaces");
+        return; // break out (note: message is still marked as not valid)
+    }
+
+
 
     // maximum length body is 67 characters and can be empty
     // maximum length msgno is 5 characters but cannot be empty
@@ -150,9 +182,13 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
     if (msgno.length() > 5) {
         logPrintlnD("APRSMSGMSG Error: msgno to long");
     }
+    if (msgno2.length() > 5) {
+        logPrintlnD("APRSMSGMSG Error: msgno2 to long");
+    }
 
 
-    if ((body.length() <= 67) && (msgno.length() <= 5)) {
+
+    if ((body.length() <= 67) && (msgno.length() <= 5) && (msgno2.length() <= 5) ) {
         // OK, we have a valid message!
         valid=true;
     }
@@ -169,10 +205,11 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
 aprsmsgmsg::aprsmsgmsg () {
     // start conditions
     valid=false; // note, 'valid' is initialised as 'false', so it is up the higher-level application to set this to 'true' when all data is filled in
-    hasack=false;
+    hasackreq=false;
     isack=false;
     isrej=false;
     msgno="";
+    msgno2="";
     body="";
     callsign=nullptr;
 };
@@ -203,7 +240,7 @@ String aprsmsgmsg::fulltxt () {
     out=(out+"         ").substring(0,9); 
 
     // an "ack" or "rej" message
-    if (isack) return (":"+out+":ack"+msgno);
+    if ((isack) && (!hasackreq)) return (":"+out+":ack"+msgno);
     if (isrej) return (":"+out+":rej"+msgno);
 
 
@@ -212,10 +249,13 @@ String aprsmsgmsg::fulltxt () {
 
 
     // is there a ack-marker?
-    if (hasack) {
-
+    if (hasackreq) {
         out += ("{" + msgno);
     };
+
+    if (isack) {
+      out += ("{" + msgno2);
+    }
 
 
     return out;

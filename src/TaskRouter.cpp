@@ -12,12 +12,13 @@
 #include "project_configuration.h"
 
 using std::make_shared;
+using std::shared_ptr;
 
 
 String create_lat_aprs(double lat);
 String create_long_aprs(double lng);
 
-RouterTask::RouterTask(TaskQueue<std::shared_ptr<APRSMessage>> &fromModem, TaskQueue<std::shared_ptr<APRSMessage>> &toModem, TaskQueue<std::shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<std::shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_ROUTER, TaskRouter), _fromModem(fromModem), _toModem(toModem), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs), _callsign_pn(make_shared<pathnode>()), _msghist(make_shared<msghist>()) {
+RouterTask::RouterTask(TaskQueue<shared_ptr<APRSMessage>> &fromModem, TaskQueue<shared_ptr<APRSMessage>> &toModem, TaskQueue<shared_ptr<APRSMessage>> &toAprsIs, TaskQueue<shared_ptr<APRSMessage>> &fromAprsIs) : Task(TASK_ROUTER, TaskRouter), _fromModem(fromModem), _toModem(toModem), _toAprsIs(toAprsIs), _fromAprsIs(fromAprsIs), _callsign_pn(make_shared<pathnode>()), _msghist(make_shared<msghist>()) {
 }
 
 RouterTask::~RouterTask() {
@@ -116,7 +117,7 @@ bool RouterTask::setup(System &system) {
   // setup beacon
   _beacon_timer.setTimeout(system.getUserConfig()->beacon.timeout * 60 * 1000);
 
-  _beaconMsg = std::shared_ptr<APRSMessage>(new APRSMessage());
+  _beaconMsg = shared_ptr<APRSMessage>(new APRSMessage());
   _beaconMsg->setSource(callsign_uc);
 
 
@@ -154,8 +155,8 @@ bool RouterTask::loop(System &system) {
 
 
   if (!_fromModem.empty()) {
-    std::shared_ptr<APRSMessage> modemMsg  = _fromModem.getElement();
-    std::shared_ptr<APRSMessage> aprsIsMsg = std::make_shared<APRSMessage>(*modemMsg);
+    shared_ptr<APRSMessage> modemMsg  = _fromModem.getElement();
+    shared_ptr<APRSMessage> aprsIsMsg = std::make_shared<APRSMessage>(*modemMsg);
     String                       path      = aprsIsMsg->getPath();
     String                       source    = aprsIsMsg->getSource();
     String                       dest      = aprsIsMsg->getDestination();
@@ -179,7 +180,7 @@ bool RouterTask::loop(System &system) {
 
     if (continueok) {     // continue if OK
 
-      std::shared_ptr<APRSMessage> digiMsg = std::make_shared<APRSMessage>(*modemMsg);
+      shared_ptr<APRSMessage> digiMsg = std::make_shared<APRSMessage>(*modemMsg);
       String                       path    = digiMsg->getPath();
 
 
@@ -232,12 +233,12 @@ bool RouterTask::loop(System &system) {
       // check if the message is addressed to me
 
       if (AMessage->getType() == APRSMessageType::Message) {
-        std::shared_ptr<aprsmsgmsg> replymsg = std::make_shared<aprsmsgmsg> ();; // reply message
+        shared_ptr<aprsmsgmsg> replymsg = std::make_shared<aprsmsgmsg> ();; // reply message
         replymsg->valid=true;
         replymsg->callsign=source_pn;; // reply back to original sender
 
         String body = AMessage->getRawBody();
-        std::shared_ptr<aprsmsgmsg> amsg = std::make_shared<aprsmsgmsg>(body);
+        shared_ptr<aprsmsgmsg> amsg = std::make_shared<aprsmsgmsg>(body);
 
         if (!amsg->valid) {
           logPrintlnD("aprs-message: invalid format of message");
@@ -266,17 +267,17 @@ bool RouterTask::loop(System &system) {
               if (!amsg->isack) {
 
                 // send ack (if needed)
-                if (amsg->hasack) {
+                if (amsg->hasackreq) {
                   replymsg->isack=true;
                   replymsg->isrej=false;
                   replymsg->msgno=amsg->msgno;
                   logPrintlnD(replymsg->fulltxt());                
                   digiMsg->getBody()->setData(replymsg->fulltxt());
                   if (apath->getpathlength() == 0) {
-                    // destination is directly reachable
+                    // destination is directly reachable -> 2 hops
                     digiMsg->setPath("WIDE1-0");
                   } else {
-                    // destination is one hop away
+                    // destination is directly reachable -> 1 hop
                     digiMsg->setPath("WIDE1-1");
                   }
                   digiMsg->setSource(_callsign_pn->pathnode2str());
@@ -472,19 +473,19 @@ bool RouterTask::loop(System &system) {
   /////////////////
 
    if (!_fromAprsIs.empty()) {
-    std::shared_ptr<APRSMessage> aprsIsMsg = _fromAprsIs.getElement();
+    shared_ptr<APRSMessage> aprsIsMsg = _fromAprsIs.getElement();
     String                       path      = aprsIsMsg->getPath();
     String                       source    = aprsIsMsg->getSource();
     String                       body      = aprsIsMsg->getRawBody();
     String                       dest      = aprsIsMsg->getDestination();
 
     String msgmsgdest;
-    int destfound;
+    int destfound=0;
 
     continueok=true;
 
-    std::shared_ptr<pathnode> source_pn = std::make_shared<pathnode> (source, normalnode);
-    //std::shared_ptr<pathnode> source_pn(new pathnode(source, normalnode));
+    shared_ptr<pathnode> source_pn = std::make_shared<pathnode> (source, normalnode);
+    //shared_ptr<pathnode> source_pn(new pathnode(source, normalnode));
     if (!(source_pn->valid)) {
       logPrintlnD("APRS-IS MSG: Error: Source message of APRS-IS has invalid format");
       continueok=false;
@@ -507,8 +508,8 @@ bool RouterTask::loop(System &system) {
 
     if (continueok) {
       String body = AMessage->getRawBody();
-      std::shared_ptr<aprsmsgmsg> amsg = std::make_shared<aprsmsgmsg>(body);
-      std::shared_ptr<aprsmsgmsg> replymsg = std::make_shared<aprsmsgmsg> ();
+      shared_ptr<aprsmsgmsg> amsg = std::make_shared<aprsmsgmsg>(body);
+      shared_ptr<aprsmsgmsg> replymsg = std::make_shared<aprsmsgmsg> ();
 
 
       if (!amsg->valid) {
@@ -529,7 +530,7 @@ bool RouterTask::loop(System &system) {
             replymsg->valid=true;
   
             // send ack (if needed) (step 1)
-            if (amsg->hasack) {
+            if (amsg->hasackreq) {
               replymsg->isack=true;
               replymsg->isrej=false;        
               replymsg->msgno=amsg->msgno;
@@ -571,7 +572,7 @@ bool RouterTask::loop(System &system) {
 
     // continue if OK  
     if (continueok){
-      logPrintlnI("APRSIS-IN: "+source+" "+path+" "+dest+ " " + destfound + " " +body);
+      logPrintlnI("APRSIS-IN: "+source+" "+path+" "+dest+ " " + msgmsgdest + " " +body);
 
       // create thirdParty Message: a copy of the original text with modified path
       aprsIsMsg->getBody()->setData("}"+source+">"+dest+",TCPIP,"+_callsign_pn->pathnode2str() + "*:" + body);
@@ -617,7 +618,7 @@ bool RouterTask::loop(System &system) {
         _toModem.addElement(_beaconMsg);
       }
 
-      system.getDisplay().addFrame(std::shared_ptr<DisplayFrame>(new TextFrame("BEACON", _beaconMsg->toString())));
+      system.getDisplay().addFrame(shared_ptr<DisplayFrame>(new TextFrame("BEACON", _beaconMsg->toString())));
       _beacon_timer.start();
     }
 

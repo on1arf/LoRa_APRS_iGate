@@ -18,6 +18,7 @@
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
 #define REG_IRQ_FLAGS            0x12
 #define REG_RX_NB_BYTES          0x13
+#define REG_MODEM_STAT           0x18
 #define REG_PKT_SNR_VALUE        0x19
 #define REG_PKT_RSSI_VALUE       0x1a
 #define REG_RSSI_VALUE           0x1b
@@ -179,8 +180,18 @@ int LoRaClass::beginPacket(int implicitHeader)
   return 1;
 }
 
+
+bool LoRaClass::isChannelBusy() {
+  // return true if a signal is detected by the radiochip 
+  // bit 0 of register "modem status" (0x18)
+  return ((readRegister(REG_MODEM_STAT) & 0x01) == 1);
+
+}
+
 int LoRaClass::endPacket(bool async)
 {
+
+  //unsigned long now = millis();
 
   // put in TX mode
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);

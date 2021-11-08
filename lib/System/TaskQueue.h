@@ -3,6 +3,8 @@
 
 #include <list>
 
+using std::list;
+
 template <typename T> class TaskQueue {
 public:
   TaskQueue() {
@@ -23,7 +25,7 @@ public:
   }
 
 private:
-  std::list<T> _elements;
+  list<T> _elements;
 };
 
 #endif
