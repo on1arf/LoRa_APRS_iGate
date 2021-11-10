@@ -433,7 +433,7 @@ bool RouterTask::loop(System &system) {
       // add "qAR" if directly-heared or up to 1 hop away
       // should be moved to a configuration-variable
       logPrintI("Pathlength: ");
-      logPrintlnI(apath->printfullpath());
+      logPrintI(apath->printfullpath());
       logPrintlnI(String(apath->getpathlength()));
 
       if (apath->getpathlength() <= 1) {

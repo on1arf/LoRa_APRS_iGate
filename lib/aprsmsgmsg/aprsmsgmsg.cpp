@@ -148,40 +148,45 @@ aprsmsgmsg::aprsmsgmsg (String msgin) {
     // does the msgno contain a "}" (for a combined "hasackreq"/"hasack" message)
     tmp=msgno.indexOf("}");
 
-    // extra check: there should be something after the "}"
-    if (tmp == l-1) {
-        logPrintlnD("APRSMSGMSG Error: Additional msgno missing");
-        return;
-    }                       // break out "{" found at the last character of the message
-                            // (note: l = length -> starts at 1, "tmp" is indexof -> starts at 0
+    if (tmp != -1) {
+        // yes, there is
 
-    // extra check: look for 2nd "}" (should not exist)
-    if (msgno.substring(tmp+1).indexOf("}") != -1) {
-        logPrintlnD("APRSMSGMSG Error: multiple } found");
-        return; // break out (note: message is still marked as not valid)
-    }; 
+        // extra check: there should be something after the "}"
+        if (tmp == l-1) {
+            logPrintlnD("APRSMSGMSG Error: Additional msgno missing");
+            return;
+        }                       // break out "{" found at the last character of the message
+                                // (note: l = length -> starts at 1, "tmp" is indexof -> starts at 0
+
+        // extra check: look for 2nd "}" (should not exist)
+        if (msgno.substring(tmp+1).indexOf("}") != -1) {
+            logPrintlnD("APRSMSGMSG Error: multiple } found");
+            return; // break out (note: message is still marked as not valid)
+        }; 
 
 
-    msgno=msgno.substring(0,tmp); // msgno is part in front of the "}"
-    msgno2=msgno.substring(tmp+1); // msgno2 of part after the "}"
-    isack=true;
+        msgno=msgno.substring(0,tmp); // msgno is part in front of the "}"
+        msgno2=msgno.substring(tmp+1); // msgno2 of part after the "}"
+        isack=true;
 
-    if (msgno2.indexOf(" ") != -1) {
-        logPrintlnD("APRSMSGMSG Error: Additional Message identifier should not contain any spaces");
-        return; // break out (note: message is still marked as not valid)
+        if (msgno2.indexOf(" ") != -1) {
+            logPrintlnD("APRSMSGMSG Error: Additional Message identifier should not contain any spaces");
+            return; // break out (note: message is still marked as not valid)
+        }
+
     }
 
-
-
-    // maximum length body is 67 characters and can be empty
-    // maximum length msgno is 5 characters but cannot be empty
-
+    // maximum length body is 67 characters
+    // maximum length msgno is 5 characters
+    
     if (body.length() > 67) {
-        logPrintlnD("APRSMSGMSG Error: boddy to long");
+        logPrintlnD("APRSMSGMSG Error: body to long");
     }
-    if (msgno.length() > 5) {
+
+    if (msgno.length() > 5) {   
         logPrintlnD("APRSMSGMSG Error: msgno to long");
     }
+
     if (msgno2.length() > 5) {
         logPrintlnD("APRSMSGMSG Error: msgno2 to long");
     }
